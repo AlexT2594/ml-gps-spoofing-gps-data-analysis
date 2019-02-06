@@ -6,15 +6,36 @@ def get_data_from_file(file):
     dataset = []
     dataset_labels = []
     single_entry = []
+    stable = False
     for line in sample_file:
         fields = line.split(',')
         message_ID = fields[0]
-        if message_ID == "$GPRMC":
 
-            entry = get_RMC_entry_as_array(line)
+        # check if we have become stable
+        if not stable:
+            # we'll never become stable if not GPGGA
+            if message_ID != "$GPGGA":
+                continue
+            else:
+                gps_qi = int(check_if_null(fields[6]))
+                if gps_qi != 0:
+                    stable = True
+                else:
+                    continue
+        # we don't use an else since it could happen that we became stable and need to start immediately
+        # an else would make us loose the first elements
+        if stable:
+            if message_ID == "$GPGGA":
+                single_entry = get_GGA_entry_as_array(line)
+            elif message_ID == "$GPGSV" or message_ID == "$GLGSV":
+                single_entry = single_entry + get_single_GSV_entry_as_array(line)
+            elif message_ID == "$GPGSA" or message_ID == "$GNGSA":
+                single_entry = single_entry + get_GSA_entry_as_array(line)
+            elif message_ID == "$GPRMC":
+                single_entry = single_entry + get_RMC_entry_as_array(line)
 
-            dataset.append(entry)
-            dataset_labels.append(random.randint(0, 1))
+                dataset.append(single_entry)
+                dataset_labels.append(random.randint(0, 1))
 
     return dataset, dataset_labels
 
@@ -135,9 +156,9 @@ def get_single_GSV_entry_as_array(entry):
     max_range = 4 + (4*satellites_for_entry)
     for i in range(4, max_range):
         if i != max_range - 1:
-            entry_array.append(fields[i])
+            entry_array.append(check_if_null(fields[i]))
         else:
-            entry_array.append(fields[i].split('*')[0])
+            entry_array.append(check_if_null(fields[i].split('*')[0]))
 
     return entry_array
 
@@ -148,6 +169,11 @@ def get_GGA_entry_as_string(entry):
 
 
 def check_if_null(elem):
+    """
+    Checks if a string is '', if so, it returns '-1'
+    :param elem: string
+    :return: string
+    """
     if elem == '':
         return '-1'
     else:

@@ -7,7 +7,7 @@ from utils.data import get_data_from_file
 
 def main():
     print("Naive Bayes")
-    dataset, dataset_labels = get_data_from_file("../data/work_route_sample_stable.txt")
+    dataset, dataset_labels = get_data_from_file("../data/work_route_sample.txt")
 
     print("==> Printing dataset")
     print(dataset)
