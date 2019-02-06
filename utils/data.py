@@ -5,12 +5,13 @@ def get_data_from_file(file):
     sample_file = open(file, 'r')
     dataset = []
     dataset_labels = []
+    single_entry = []
     for line in sample_file:
         fields = line.split(',')
         message_ID = fields[0]
-        if message_ID == "$GPGGA":
+        if message_ID == "$GPRMC":
 
-            entry = get_GGA_entry_as_array(line)
+            entry = get_RMC_entry_as_array(line)
 
             dataset.append(entry)
             dataset_labels.append(random.randint(0, 1))
@@ -36,10 +37,8 @@ def get_GGA_entry_as_array(entry):
     age_of_diff_gps_data = check_if_null(fields[13])
     diff_ref_station_id = check_if_null(fields[14].split('*')[0])
 
-    entry_array = [gps_qi, sat_num,
-             hor_dilution, antenna_alt, units_antenna_alt,
-             geoidal_sep, units_geoidal_sep, age_of_diff_gps_data,
-             diff_ref_station_id]
+    entry_array = [gps_qi, sat_num, hor_dilution, antenna_alt,
+                   geoidal_sep,  age_of_diff_gps_data, diff_ref_station_id]
 
     '''
     entry = [lat, lat_dir, long, long_dir, gps_qi, sat_num,
@@ -62,10 +61,10 @@ def get_RMC_entry_as_array(entry):
     speed_over_ground = check_if_null(fields[7])
     course_over_ground = check_if_null(fields[8])
     date = check_if_null(fields[9])
-    magnetic_variation = check_if_null(fields[10])
-    mode = check_if_null(fields[11].split('*')[0])
+#    magnetic_variation = check_if_null(fields[10])
+    mode = check_if_null(fields[12].split('*')[0])
 
-    entry_array = [status, speed_over_ground, course_over_ground, magnetic_variation, mode]
+    entry_array = [status, speed_over_ground, course_over_ground, mode]
 
     return entry_array
 
@@ -93,9 +92,9 @@ def get_GSA_entry_as_array(entry):
     hdop = check_if_null(fields[16])
     vdop = check_if_null(fields[17].split('*')[0])
 
-    entry_array = [mode_1, mode_2, satellite_used_1, satellite_used_2, satellite_used_3, satellite_used_4, satellite_used_5,
-             satellite_used_6, satellite_used_7, satellite_used_8, satellite_used_9, satellite_used_10, satellite_used_11,
-             satellite_used_12, pdop, hdop, vdop]
+    entry_array = [mode_1, mode_2, satellite_used_1, satellite_used_2, satellite_used_3, satellite_used_4,
+                   satellite_used_5, satellite_used_6, satellite_used_7, satellite_used_8, satellite_used_9,
+                   satellite_used_10, satellite_used_11, satellite_used_12, pdop, hdop, vdop]
 
     return entry_array
 
@@ -130,12 +129,15 @@ def get_single_GSV_entry_as_array(entry):
     if message_number < n_of_messages:
         satellites_for_entry = MAX_SATELLITES_FOR_ENTRY
     else:
-        satellites_for_entry = total_satellites % n_of_messages
+        satellites_for_entry = int(total_satellites) - (MAX_SATELLITES_FOR_ENTRY * (int(n_of_messages) - 1))
 
     entry_array = []
-
-    for i in range(satellites_for_entry):
-        entry_array.append(fields[4 + 4 * i])
+    max_range = 4 + (4*satellites_for_entry)
+    for i in range(4, max_range):
+        if i != max_range - 1:
+            entry_array.append(fields[i])
+        else:
+            entry_array.append(fields[i].split('*')[0])
 
     return entry_array
 

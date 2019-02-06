@@ -7,7 +7,7 @@ from utils.data import get_data_from_file
 
 def main():
     print("Naive Bayes")
-    dataset, dataset_labels = get_data_from_file("../data/work_route_sample.txt")
+    dataset, dataset_labels = get_data_from_file("../data/work_route_sample_stable.txt")
 
     print("==> Printing dataset")
     print(dataset)
@@ -48,7 +48,6 @@ def main():
     print(metrics.confusion_matrix(y_test, pred))
 
     return
-
 
 
 if __name__ == '__main__':
