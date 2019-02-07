@@ -7,12 +7,13 @@ from utils.data import get_data_from_file_2, get_single_elem_from_file, get_data
 
 def main():
     print("Naive Bayes")
-    dataset, dataset_labels = get_data_from_file_2("../data/work_route_sample.txt")
+    dataset, dataset_labels = get_data_from_file_2("../data/work_route_sample_stable.txt")
 
     print("==> Printing dataset")
     print(dataset[0])
+    print(str(len(dataset[0])))
 
-    transform_data_into_CSV("../data/work_route_sample.txt")
+    transform_data_into_CSV("../data/work_route_sample_stable.txt")
 
 '''
     print("==> Printing dataset labels")
