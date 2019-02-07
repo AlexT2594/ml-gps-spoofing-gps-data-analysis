@@ -1,12 +1,13 @@
 import random
 
 
-def get_data_from_file(file):
+def get_data_from_file(file, spoofed=False):
     sample_file = open(file, 'r')
     dataset = []
     dataset_labels = []
     single_entry = []
     stable = False
+
     for line in sample_file:
         fields = line.split(',')
         message_ID = fields[0]
@@ -40,6 +41,146 @@ def get_data_from_file(file):
     return dataset, dataset_labels
 
 
+def get_data_from_file_2(file, spoofed=False):
+    sample_file = open(file, 'r')
+    dataset = []
+    dataset_labels = []
+    single_entry = []
+    stable = False
+
+    lines = sample_file.readlines()
+    line_index = 0
+    lines_count = len(lines)
+
+    while line_index < lines_count:
+        line = lines[line_index]
+        fields = line.split(',')
+        message_ID = fields[0]
+
+        # check if we have become stable
+        if not stable:
+            # we'll never become stable if not GPGGA
+            if message_ID != "$GPGGA":
+                line_index += 1
+                continue
+            else:
+                gps_qi = int(check_if_null(fields[6]))
+                if gps_qi != 0:
+                    stable = True
+                else:
+                    line_index += 1
+                    continue
+        # we don't use an else since it could happen that we became stable and need to start immediately
+        # an else would make us loose the first elements
+        if stable:
+            if message_ID == "$GPGGA":
+                single_entry = get_GGA_entry_as_array(line)
+                line_index += 1
+            elif message_ID == "$GPGSV" or message_ID == "$GLGSV":
+                fields = line.split(',')
+                total_number_of_messages = int(fields[1])
+                GSV_messages = []
+                for GSV_index in range(line_index, line_index + total_number_of_messages):
+                    GSV_messages.append(lines[GSV_index])
+
+                single_entry += get_GSV_entry_as_array(GSV_messages)
+                line_index += total_number_of_messages
+            elif message_ID == "$GPGSA" or message_ID == "$GNGSA":
+                single_entry = single_entry + get_GSA_entry_as_array(line)
+                line_index += 1
+            elif message_ID == "$GPRMC":
+                single_entry = single_entry + get_RMC_entry_as_array(line)
+                line_index += 1
+
+                dataset.append(single_entry)
+                dataset_labels.append(random.randint(0, 1))
+            else:
+                line_index += 1
+
+    return dataset, dataset_labels
+
+
+def get_single_elem_from_file(file):
+    sample_file = open(file, 'r')
+    dataset = []
+    dataset_labels = []
+    single_entry = []
+    stable = False
+
+    lines = sample_file.readlines()
+    line_index = 0
+    lines_count = len(lines)
+
+    while line_index < lines_count:
+        line = lines[line_index]
+        fields = line.split(',')
+        message_ID = fields[0]
+
+        if message_ID == "$GPGSV" or message_ID == "$GLGSV":
+            fields = line.split(',')
+            total_number_of_messages = int(fields[1])
+            GSV_messages = []
+            for GSV_index in range(line_index, line_index + total_number_of_messages):
+                GSV_messages.append(lines[GSV_index])
+
+            single_entry += get_GSV_entry_as_array(GSV_messages)
+            line_index += total_number_of_messages
+
+            dataset.append(single_entry)
+            dataset_labels.append(random.randint(0, 1))
+        else:
+            line_index += 1
+
+    return dataset, dataset_labels
+
+
+def transform_data_into_CSV(file):
+    dataset, dataset_labels = get_data_from_file_2(file)
+    csv_file_name = ".." + file.split(".")[2] + ".csv"
+    print(csv_file_name)
+    csv_file = open(csv_file_name, "w")
+    GPGSV_SVS = 16
+    GLGSV_SVS = 12
+    GSA_SAT_USED = 12
+
+    labels = "spoofed,GGA_sat_num,GGA_hdop,GGA_antenna_alt,GGA_geoidal_sep,GGA_age_of_diff_gps_data," + \
+             "GGA_diff_ref_station_id,GPGSA_sat_in_view,"
+
+    for i in range(GPGSV_SVS):
+        labels += "GPGSV_prn_" + str(i) + ","
+        labels += "GPGSV_elevation_" + str(i) + ","
+        labels += "GPGSV_azimuth_" + str(i) + ","
+        labels += "GPGSV_snr_" + str(i) + ","
+
+    for i in range(GLGSV_SVS):
+        labels += "GLPGSV_prn_" + str(i) + ","
+        labels += "GLGSV_elevation_" + str(i) + ","
+        labels += "GLGSV_azimuth_" + str(i) + ","
+        labels += "GLGSV_snr_" + str(i) + ","
+
+    labels += "GPGSA_mode1,GPGSA_mode2,"
+
+    for i in range(GSA_SAT_USED):
+        labels += "GPGSA_sat_used_" + str(i) + ","
+
+    labels += "GPGSA_pdop,GPGSA_hdop,GPGSA_vdop,"
+
+    for i in range(2):
+        labels += "GNGSA_mode1,GNGSA_mode2,"
+
+        for i in range(GSA_SAT_USED):
+            labels += "GNGSA_sat_used_" + str(i) + ","
+
+        labels += "GNGSA_pdop,GNGSA_hdop,GNGSA_vdop,"
+
+    labels += "RMC_status,RMC_speed,RMC_course,RMC_mode"
+
+    #csv_file.write(labels)
+    csv_file.close()
+
+    # for index in range(len(dataset)):
+
+
 def get_GGA_entry_as_array(entry):
     fields = entry.split(',')
 
@@ -48,18 +189,19 @@ def get_GGA_entry_as_array(entry):
     lat_dir = check_if_null(fields[3])
     long = check_if_null(fields[4])
     long_dir = check_if_null(fields[5])
-    gps_qi = check_if_null(fields[6])
-    sat_num = check_if_null(fields[7])
-    hor_dilution = check_if_null(fields[8])
-    antenna_alt = check_if_null(fields[9])
+    gps_qi = check_if_null(fields[6])  # ordinal
+    sat_num = check_if_null(fields[7])  # categorical
+    hor_dilution = check_if_null(fields[8])  # interval
+    antenna_alt = check_if_null(fields[9])  # interval
     units_antenna_alt = check_if_null(fields[10])
-    geoidal_sep = check_if_null(fields[11])
+    geoidal_sep = check_if_null(fields[11])  # interval
     units_geoidal_sep = check_if_null(fields[12])
-    age_of_diff_gps_data = check_if_null(fields[13])
+    age_of_diff_gps_data = check_if_null(fields[13])  # interval
     diff_ref_station_id = check_if_null(fields[14].split('*')[0])
 
+    # len(entry_array) = 7
     entry_array = [gps_qi, sat_num, hor_dilution, antenna_alt,
-                   geoidal_sep,  age_of_diff_gps_data, diff_ref_station_id]
+                   geoidal_sep, age_of_diff_gps_data, diff_ref_station_id]
 
     '''
     entry = [lat, lat_dir, long, long_dir, gps_qi, sat_num,
@@ -70,21 +212,23 @@ def get_GGA_entry_as_array(entry):
 
     return entry_array
 
+
 def get_RMC_entry_as_array(entry):
     fields = entry.split(",")
 
     utc = check_if_null(fields[1])
-    status = check_if_null(fields[2])
+    status = check_if_null(fields[2])  # categorical
     lat = check_if_null(fields[3])
     lat_dir = check_if_null(fields[4])
     long = check_if_null(fields[5])
     long_dir = check_if_null(fields[6])
-    speed_over_ground = check_if_null(fields[7])
-    course_over_ground = check_if_null(fields[8])
+    speed_over_ground = check_if_null(fields[7])  # interval
+    course_over_ground = check_if_null(fields[8])  # interval
     date = check_if_null(fields[9])
-#    magnetic_variation = check_if_null(fields[10])
-    mode = check_if_null(fields[12].split('*')[0])
+    #    magnetic_variation = check_if_null(fields[10])
+    mode = check_if_null(fields[12].split('*')[0])  # categorical
 
+    # len(entry_array) = 4
     entry_array = [status, speed_over_ground, course_over_ground, mode]
 
     return entry_array
@@ -93,31 +237,34 @@ def get_RMC_entry_as_array(entry):
 def get_GSA_entry_as_array(entry):
     fields = entry.split(",")
 
-    mode_1 = check_if_null(fields[1])
-    mode_2 = check_if_null(fields[2])
+    mode_1 = check_if_null(fields[1])  # categorical
+    mode_2 = check_if_null(fields[2])  # ordinal
 
-    satellite_used_1 = check_if_null(fields[3])
-    satellite_used_2 = check_if_null(fields[4])
-    satellite_used_3 = check_if_null(fields[5])
-    satellite_used_4 = check_if_null(fields[6])
-    satellite_used_5 = check_if_null(fields[7])
-    satellite_used_6 = check_if_null(fields[8])
-    satellite_used_7 = check_if_null(fields[9])
-    satellite_used_8 = check_if_null(fields[10])
-    satellite_used_9 = check_if_null(fields[11])
-    satellite_used_10 = check_if_null(fields[12])
-    satellite_used_11 = check_if_null(fields[13])
-    satellite_used_12 = check_if_null(fields[14])
+    satellite_used_1 = check_if_null(fields[3])  # categorical
+    satellite_used_2 = check_if_null(fields[4])  # categorical
+    satellite_used_3 = check_if_null(fields[5])  # categorical
+    satellite_used_4 = check_if_null(fields[6])  # categorical
+    satellite_used_5 = check_if_null(fields[7])  # categorical
+    satellite_used_6 = check_if_null(fields[8])  # categorical
+    satellite_used_7 = check_if_null(fields[9])  # categorical
+    satellite_used_8 = check_if_null(fields[10])  # categorical
+    satellite_used_9 = check_if_null(fields[11])  # categorical
+    satellite_used_10 = check_if_null(fields[12])  # categorical
+    satellite_used_11 = check_if_null(fields[13])  # categorical
+    satellite_used_12 = check_if_null(fields[14])  # categorical
 
-    pdop = check_if_null(fields[15])
-    hdop = check_if_null(fields[16])
-    vdop = check_if_null(fields[17].split('*')[0])
+    pdop = check_if_null(fields[15])  # interval
+    hdop = check_if_null(fields[16])  # interval
+    vdop = check_if_null(fields[17].split('*')[0])  # interval
+
+    # len(entry_array) = 17
 
     entry_array = [mode_1, mode_2, satellite_used_1, satellite_used_2, satellite_used_3, satellite_used_4,
                    satellite_used_5, satellite_used_6, satellite_used_7, satellite_used_8, satellite_used_9,
                    satellite_used_10, satellite_used_11, satellite_used_12, pdop, hdop, vdop]
 
     return entry_array
+
 
 def get_VTG_entry_as_array(entry):
     fields = entry.split(",")
@@ -138,7 +285,6 @@ def get_VTG_entry_as_array(entry):
 
 
 def get_single_GSV_entry_as_array(entry):
-
     MAX_SATELLITES_FOR_ENTRY = 4
 
     fields = entry.split(",")
@@ -152,13 +298,54 @@ def get_single_GSV_entry_as_array(entry):
     else:
         satellites_for_entry = int(total_satellites) - (MAX_SATELLITES_FOR_ENTRY * (int(n_of_messages) - 1))
 
-    entry_array = []
-    max_range = 4 + (4*satellites_for_entry)
+    # we consider only once the number of satellites since it could be
+    # an important attribute
+
+    # since we could have multiple GSV sentences, we consider it only at the first message
+    if message_number == 1:
+        entry_array = [total_satellites]  # categorical
+    else:
+        entry_array = []
+
+    # we will append, for each, satellite, 4 attributes
+    # SV PRN number -> categorical
+    # elevation -> interval
+    # azimuth -> interval
+    # SNR -> interval
+
+    max_range = 4 + (4 * satellites_for_entry)
     for i in range(4, max_range):
         if i != max_range - 1:
             entry_array.append(check_if_null(fields[i]))
         else:
             entry_array.append(check_if_null(fields[i].split('*')[0]))
+
+    return entry_array
+
+
+def get_GSV_entry_as_array(messages):
+    """
+    Gets as input an array of GSV messages and returns an array of
+    [total_SVs, prn_0, elevation_0, azimuth_0, snr_0, ..., prn_15, elevation_15, azimuth_15, snr_15]
+    :param messages: array of strings
+    :return: array of strings
+    """
+
+    LEN_GPGSV_ENTRY = 89
+    LEN_GLGSV_ENTRY = 49
+    entry_type = messages[0].split(',')[0]
+    if entry_type == "$GPGSV":
+        LEN_ENTRY = LEN_GPGSV_ENTRY
+    else:
+        LEN_ENTRY = LEN_GLGSV_ENTRY
+    entry_array = []
+
+    for message in messages:
+        single_message_as_array = get_single_GSV_entry_as_array(message)
+        entry_array += single_message_as_array
+
+    while len(entry_array) != LEN_ENTRY:
+        entry_array.append('-1')
 
     return entry_array
 
