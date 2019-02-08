@@ -145,6 +145,8 @@ def transform_data_into_CSV(file):
     labels = "spoofed,GGA_gps_qi,GGA_sat_num,GGA_hdop,GGA_antenna_alt,GGA_geoidal_sep,GGA_age_of_diff_gps_data," + \
              "GGA_diff_ref_station_id,"
 
+    labels += "GPGSV_sat_in_view,"
+
     for i in range(GPGSV_SVS):
         labels += "GPGSV_prn_" + str(i) + ","
         labels += "GPGSV_elevation_" + str(i) + ","
@@ -178,6 +180,7 @@ def transform_data_into_CSV(file):
 
     csv_file.write(labels)
 
+    sample_index = 0
     features_length = len(dataset[0])
     for sample in dataset:
         entry = ""
@@ -191,6 +194,8 @@ def transform_data_into_CSV(file):
 
             counter += 1
 
+        csv_file.write(str(dataset_labels[sample_index]) + ",")
+        sample_index += 1
         csv_file.write(entry)
 
     csv_file.close()
