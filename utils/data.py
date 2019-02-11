@@ -1,5 +1,5 @@
-import random
-
+from random import randint
+from math import sin, cos, pi
 
 def get_data_from_file(file, spoofed=False):
     sample_file = open(file, 'r')
@@ -36,7 +36,7 @@ def get_data_from_file(file, spoofed=False):
                 single_entry = single_entry + get_RMC_entry_as_array(line)
 
                 dataset.append(single_entry)
-                dataset_labels.append(random.randint(0, 1))
+                dataset_labels.append(randint(0, 1))
 
     return dataset, dataset_labels
 
@@ -130,6 +130,38 @@ def get_lat_long_entries_from_file(file):
                 continue
 
     return lat_long_entries
+
+
+def get_time_entries_from_file(file):
+    sample_file = open(file, 'r')
+    time_entries = []
+    stable = False
+
+    for line in sample_file:
+        fields = line.split(",")
+        message_ID = fields[0]
+
+        # check if we have become stable
+        if not stable:
+            # we'll never become stable if not GPGGA
+            if message_ID != "$GPGGA":
+                continue
+            else:
+                gps_qi = int(check_if_null(fields[6]))
+                if gps_qi != 0:
+                    stable = True
+                else:
+                    continue
+        # we don't use an else since it could happen that we became stable and need to start immediately
+        # an else would make us loose the first elements
+        if stable:
+            if message_ID == "$GPGGA":
+                time_entries.append(check_if_null(fields[1]))
+
+            else:
+                continue
+
+    return time_entries
 
 
 def get_single_elem_from_file(file):
@@ -311,7 +343,8 @@ def get_GSA_entry_as_array(entry):
 
     # len(entry_array) = 17
 
-    entry_array = [mode_1, mode_2, satellite_used_0, satellite_used_1, satellite_used_2, satellite_used_3, satellite_used_4,
+    entry_array = [mode_1, mode_2, satellite_used_0, satellite_used_1, satellite_used_2, satellite_used_3,
+                   satellite_used_4,
                    satellite_used_5, satellite_used_6, satellite_used_7, satellite_used_8, satellite_used_9,
                    satellite_used_10, satellite_used_11, pdop, hdop, vdop]
 
@@ -334,6 +367,7 @@ def get_VTG_entry_as_array(entry):
     entry_array = [course_1, course_2, speed1, speed2, mode]
 
     return entry_array
+
 
 def get_single_GSV_entry_as_array(entry):
     MAX_SATELLITES_FOR_ENTRY = 4
@@ -404,6 +438,85 @@ def get_GSV_entry_as_array(messages):
 def get_GGA_entry_as_string(entry):
     entry_array = get_GGA_entry_as_array(entry)
     return " ".join(entry_array)
+
+
+def utc_to_sin_cos(utc):
+    """
+    Transforms a time value expressed in UTC into sin, cos values
+    :param utc: String
+    :return: Float, Float
+    """
+
+    # in order to convert to polar coordinates we do the following reasoning:
+    # rads : 2PI = secs : total_secs
+    # rads = (secs * 2PI) / total_secs
+    # rads = (secs * PI) / (total_secs / 2)
+    TOTAL_SECS_PER_DAY = 24 * 60 * 60 / 2
+
+    hours = int(utc[:2])
+    mins = int(utc[2:4])
+    secs = int(utc[4:6])
+    total_secs = hours*60 + mins*60 + secs
+
+    return sin(pi * total_secs / TOTAL_SECS_PER_DAY), cos(pi * total_secs / TOTAL_SECS_PER_DAY)
+
+
+def lat_long_to_sin_cos(nmea_lat, type="lat", direction="N"):
+    """
+    Transforms NMEA latitude (ddmm.mmmm) into sin, cos values
+    :param nmea_lat: String
+    :return: Float, float
+    """
+
+    if type == "lat":
+        if direction == "S":
+            degrees = (float(nmea_lat[0:2]) + float(nmea_lat[2:]) / 60) * -1
+        else:
+            degrees = float(nmea_lat[0:2]) + float(nmea_lat[2:]) / 60
+        degrees += 90
+        TOTAL = 180 / 2
+    else:
+        if direction == "W":
+            degrees = (float(nmea_lat[0:3]) + float(nmea_lat[3:]) / 60) * -1
+        else:
+            degrees = float(nmea_lat[0:3]) + float(nmea_lat[3:]) / 60
+        degrees += 180
+        TOTAL = 360 / 2
+
+    return sin(pi * degrees / TOTAL), cos(pi * degrees / TOTAL)
+
+
+def transform_data_into_numeric(file):
+    sample_file = open(file, 'r')
+    entries = []
+    stable = False
+
+    for line in sample_file:
+        fields = line.split(",")
+        message_ID = fields[0]
+
+        # check if we have become stable
+        if not stable:
+            # we'll never become stable if not GPGGA
+            if message_ID != "$GPGGA":
+                continue
+            else:
+                gps_qi = int(check_if_null(fields[6]))
+                if gps_qi != 0:
+                    stable = True
+                else:
+                    continue
+        # we don't use an else since it could happen that we became stable and need to start immediately
+        # an else would make us loose the first elements
+        if stable:
+            if message_ID == "$GPGGA":
+                sin_time, cos_time = utc_to_sin_cos(check_if_null(fields[1]))
+                sin_lat, cos_lat = lat_long_to_sin_cos(check_if_null(fields[2]), "lat", fields[3])
+                sin_long, cos_long = lat_long_to_sin_cos(check_if_null(fields[4]), "long", fields[5])
+
+
+            else:
+                continue
 
 
 def check_if_null(elem):
