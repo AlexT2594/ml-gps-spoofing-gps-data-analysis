@@ -100,6 +100,38 @@ def get_data_from_file_2(file, spoofed=False):
     return dataset, dataset_labels
 
 
+def get_lat_long_entries_from_file(file):
+    sample_file = open(file, 'r')
+    lat_long_entries = []
+    stable = False
+
+    for line in sample_file:
+        fields = line.split(",")
+        message_ID = fields[0]
+
+        # check if we have become stable
+        if not stable:
+            # we'll never become stable if not GPGGA
+            if message_ID != "$GPGGA":
+                continue
+            else:
+                gps_qi = int(check_if_null(fields[6]))
+                if gps_qi != 0:
+                    stable = True
+                else:
+                    continue
+        # we don't use an else since it could happen that we became stable and need to start immediately
+        # an else would make us loose the first elements
+        if stable:
+            if message_ID == "$GPGGA":
+                entry = [check_if_null(fields[2]), check_if_null(fields[4])]
+                lat_long_entries.append(entry)
+            else:
+                continue
+
+    return lat_long_entries
+
+
 def get_single_elem_from_file(file):
     sample_file = open(file, 'r')
     dataset = []

@@ -6,7 +6,7 @@ from utils.data import get_data_from_file_2, get_single_elem_from_file, get_data
 
 
 def main():
-    print("Naive Bayes")
+    print("==> Naive Bayes")
     dataset, dataset_labels = get_data_from_file_2("../data/work_route_sample_stable.txt")
 
     print("==> Printing dataset")
