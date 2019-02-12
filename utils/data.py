@@ -93,7 +93,85 @@ def get_data_from_file_2(file, spoofed=False):
                 line_index += 1
 
                 dataset.append(single_entry)
-                dataset_labels.append(random.randint(0, 1))
+                dataset_labels.append(randint(0, 1))
+            else:
+                line_index += 1
+
+    return dataset, dataset_labels
+
+
+def get_numeric_data_from_file(file, spoofed=False):
+    LEN_GPGSV_ENTRY = 65
+
+    sample_file = open(file, 'r')
+    dataset = []
+    dataset_labels = []
+    single_entry = []
+    stable = False
+
+    lines = sample_file.readlines()
+    line_index = 0
+    lines_count = len(lines)
+
+    while line_index < lines_count:
+        line = lines[line_index]
+        fields = line.split(',')
+        message_ID = fields[0]
+
+        # check if we have become stable
+        if not stable:
+            # we'll never become stable if not GPGGA
+            if message_ID != "$GPGGA":
+                line_index += 1
+                continue
+            else:
+                gps_qi = int(check_if_null(fields[6]))
+                if gps_qi != 0:
+                    stable = True
+                else:
+                    line_index += 1
+                    continue
+        # we don't use an else since it could happen that we became stable and need to start immediately
+        # an else would make us loose the first elements
+        if stable:
+            if message_ID == "$GPGGA":
+                single_entry = []
+
+                time = check_if_null(fields[1])
+                time_sin, time_cos = utc_to_sin_cos(time)
+                single_entry.append(str(time_sin))
+                single_entry.append(str(time_cos))
+
+                lat = check_if_null(fields[2])
+                lat_dir = check_if_null(fields[3])
+                lat_sin, lat_cos = lat_long_to_sin_cos(lat, "lat", lat_dir)
+                single_entry.append(str(lat_sin))
+                single_entry.append(str(lat_cos))
+
+                long = check_if_null(fields[4])
+                long_dir = check_if_null(fields[5])
+                long_sin, long_cos = lat_long_to_sin_cos(long, "long", long_dir)
+                single_entry.append(str(long_sin))
+                single_entry.append(str(long_cos))
+
+                line_index += 1
+            elif message_ID == "$GPGSV":
+                fields = line.split(',')
+                total_number_of_messages = int(fields[1])
+                GSV_messages = []
+                for GSV_index in range(line_index, line_index + total_number_of_messages):
+                    GSV_messages.append(lines[GSV_index])
+
+                GSV_entry = get_GSV_entry_as_array(GSV_messages)
+                single_entry.append(GSV_entry[0]) # which is the total number of satellites
+
+                for prn_index in range(1, LEN_GPGSV_ENTRY, 4):
+                    single_entry.append(GSV_entry[prn_index]) # we add the sat_prn
+
+                line_index += total_number_of_messages
+
+                dataset.append(single_entry)
+                dataset_labels.append(randint(0, 1))
             else:
                 line_index += 1
 
@@ -191,7 +269,7 @@ def get_single_elem_from_file(file):
             line_index += total_number_of_messages
 
             dataset.append(single_entry)
-            dataset_labels.append(random.randint(0, 1))
+            dataset_labels.append(randint(0, 1))
         else:
             line_index += 1
 
@@ -256,6 +334,41 @@ def transform_data_into_CSV(file):
             else:
                 entry += feature + "\n"
 
+            counter += 1
+
+        csv_file.write(str(dataset_labels[sample_index]) + ",")
+        sample_index += 1
+        csv_file.write(entry)
+
+    csv_file.close()
+
+
+def transform_data_for_numeric_into_CSV(file):
+    dataset, dataset_labels = get_numeric_data_from_file(file)
+    csv_file_name = ".." + file.split(".")[2] + "_numeric.csv"
+    csv_file = open(csv_file_name, "w")
+    GPGSV_SVS = 16
+
+    labels = "spoofed,time_sin,time_cos,lat_sin,lat_cos,long_sin,long_cos,n_satellites,"
+
+    for i in range(GPGSV_SVS - 1):
+        labels += "sat_prn_" + str(i) + ","
+
+    labels += "sat_prn_" + str(GPGSV_SVS - 1) + "\n"
+
+    csv_file.write(labels)
+
+    sample_index = 0
+    features_length = len(dataset[0])
+    for sample in dataset:
+        entry = ""
+        counter = 0
+
+        for feature in sample:
+            if counter < features_length - 1:
+                entry += feature + ","
+            else:
+                entry += feature + "\n"
             counter += 1
 
         csv_file.write(str(dataset_labels[sample_index]) + ",")
@@ -388,7 +501,7 @@ def get_single_GSV_entry_as_array(entry):
 
     # since we could have multiple GSV sentences, we consider it only at the first message
     if message_number == 1:
-        entry_array = [str(total_satellites)]  # categorical
+        entry_array = [str(total_satellites)]  # interval
     else:
         entry_array = []
 

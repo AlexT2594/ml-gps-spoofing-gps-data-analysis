@@ -2,7 +2,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from utils.ml import BasicCountVectorizer
-from utils.data import get_data_from_file_2, get_single_elem_from_file, get_data_from_file, transform_data_into_CSV
+from utils.data import get_data_from_file_2, get_single_elem_from_file, get_data_from_file, transform_data_into_CSV, transform_data_for_numeric_into_CSV
 
 
 def main():
@@ -13,7 +13,7 @@ def main():
     print(dataset[0])
     print(str(len(dataset[0])))
 
-    transform_data_into_CSV("../data/work_route_sample_stable.txt")
+    transform_data_for_numeric_into_CSV("../data/work_route_sample_stable.txt")
 
 '''
     print("==> Printing dataset labels")
