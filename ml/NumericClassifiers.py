@@ -14,6 +14,7 @@ from sklearn.gaussian_process.kernels import RBF
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
 
 def main():
 
@@ -78,11 +79,21 @@ def main():
         clf = Pipeline(steps=[('preprocessor', preprocessor),
                               ('classifier', classifier)])
 
+        """
+        
+        This was done traditionally, without using a K-fold cross-validation method.
+        
         clf.fit(X_train, y_train)
         score = clf.score(X_test, y_test)
 
         print("==> Classifier: " + name)
         print("\tScore: %.3f" % score)
+        """
+
+        #  mean score and the 95% confidence interval of the score
+        scores = cross_val_score(clf, X, y, cv=10)
+        print("==> Classifier: " + name)
+        print("\tAccuracy: %0.3f (+/- %0.3f)" % (scores.mean(), scores.std() * 2))
 
 
 if __name__ == '__main__':
