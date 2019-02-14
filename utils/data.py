@@ -165,8 +165,14 @@ def get_numeric_data_from_file(file, spoofed=False):
                 GSV_entry = get_GSV_entry_as_array(GSV_messages)
                 single_entry.append(GSV_entry[0]) # which is the total number of satellites
 
+                sv_prns = ['0'] * 32
+
                 for prn_index in range(1, LEN_GPGSV_ENTRY, 4):
-                    single_entry.append(GSV_entry[prn_index]) # we add the sat_prn
+                    sat_prn = GSV_entry[prn_index]
+                    # we have 32 sv and we'll set sv_prn_i by accessing sv_prn_i - 1
+                    sv_prns[int(sat_prn) - 1] = '1'
+
+                single_entry += sv_prns
 
                 line_index += total_number_of_messages
 
@@ -347,14 +353,14 @@ def transform_data_for_numeric_into_CSV(file):
     dataset, dataset_labels = get_numeric_data_from_file(file)
     csv_file_name = ".." + file.split(".")[2] + "_numeric.csv"
     csv_file = open(csv_file_name, "w")
-    GPGSV_SVS = 16
+    GPS_TOTAL_SAT = 32
 
     labels = "spoofed,time_sin,time_cos,lat_sin,lat_cos,long_sin,long_cos,n_satellites,"
 
-    for i in range(GPGSV_SVS - 1):
-        labels += "sat_prn_" + str(i) + ","
+    for i in range(1, GPS_TOTAL_SAT):
+        labels += "sv_prn_" + str(i) + ","
 
-    labels += "sat_prn_" + str(GPGSV_SVS - 1) + "\n"
+    labels += "sv_prn_" + str(GPS_TOTAL_SAT) + "\n"
 
     csv_file.write(labels)
 

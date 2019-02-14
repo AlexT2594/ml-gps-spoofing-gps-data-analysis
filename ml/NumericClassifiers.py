@@ -18,7 +18,7 @@ from sklearn.model_selection import cross_val_score
 
 def main():
 
-    N_SAT = 16
+    N_SAT = 32
     # Read data from Titanic dataset.
     data_file_name = "../data/work_route_sample_stable_numeric.csv"
     data = pd.read_csv(data_file_name)
@@ -47,7 +47,7 @@ def main():
     # - long_cos: float.
     # - n_satellites: int
     # Categorical Features:
-    # - sat_prn_i: categories encoded as integers{01, 02, ..., 15}.
+    # - sv_prn_i: categories encoded as integers {0, 1}.
 
     # We create the preprocessing pipelines for both numeric and categorical data.
     numeric_features = ['time_sin', 'time_cos', 'lat_sin', 'lat_cos', 'long_sin', 'long_cos', 'n_satellites']
@@ -56,8 +56,8 @@ def main():
     numeric_transformer = Pipeline(steps=[('imputer', SimpleImputer())])
 
     categorical_features = []
-    for i in range(N_SAT):
-        category = "sat_prn_" + str(i)
+    for i in range(1, N_SAT + 1):
+        category = "sv_prn_" + str(i)
         categorical_features.append(category)
     categorical_transformer = Pipeline(steps=[('imputer', SimpleImputer()),
                                               ('onehot', OneHotEncoder(handle_unknown='ignore'))])

@@ -20,6 +20,8 @@ def main():
     print("==> Classifier: Naive Bayes")
     print("\tAccuracy: %0.3f (+/- %0.3f)" % (scores.mean(), scores.std() * 2))
 
+    transform_data_for_numeric_into_CSV("../data/work_route_sample_stable.txt")
+
 """
     This was done before not using K-fold cross-validation
     
