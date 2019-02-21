@@ -209,11 +209,66 @@ def get_lat_long_entries_from_file(file):
         if stable:
             if message_ID == "$GPGGA":
                 entry = [check_if_null(fields[2]), check_if_null(fields[4])]
-                lat_long_entries.append(entry)
+                if entry[0] != '-1':
+                    lat_long_entries.append(entry)
             else:
                 continue
 
     return lat_long_entries
+
+def get_lat_long_info_from_file(file):
+    """
+    Gets lat_min, lat_max, lat_equal_digits_after_point, lat_max_distance,
+         long_min, long_max, long_equal_digits_after_point, long_max_distance
+    :param file: String
+    :return: [Mix]
+    """
+    # there are 6 significant digits after the point
+    lat_long_entries = get_lat_long_entries_from_file("../data/work_true_window.txt")
+    lat = []
+    long = []
+
+    for entry in lat_long_entries:
+        latitude = entry[0]
+        longitude = entry[1]
+
+        lat.append(float(latitude))
+        long.append(float(longitude))
+
+    lat.sort()
+    long.sort()
+
+    lat_last_index = len(lat) - 1
+    long_last_index = len(long) - 1
+
+    first_lat = lat[0]
+    last_lat = lat[lat_last_index]
+
+    first_long = long[0]
+    last_long = long[long_last_index]
+
+    first_lat_digits = str(first_lat).split('.')[1]
+    last_lat_digits = str(last_lat).split('.')[1]
+
+    first_long_digits = str(first_long).split('.')[1]
+    last_long_digits = str(last_long).split('.')[1]
+
+    lat_counter = 0
+    for i in range(6):
+        if first_lat_digits[i] == last_lat_digits[i]:
+            lat_counter += 1
+        else:
+            break
+
+    long_counter = 0
+    for i in range(6):
+        if first_long_digits[i] == last_long_digits[i]:
+            long_counter += 1
+        else:
+            break
+
+    return [first_lat, last_lat, lat_counter, last_lat - first_lat,
+            first_long, last_long, long_counter, last_long - first_long]
 
 
 def get_time_entries_from_file(file):
