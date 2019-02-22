@@ -15,13 +15,14 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.metrics import accuracy_score, confusion_matrix
+
+from utils.data import get_numeric_data_from_file
+from random import shuffle
 
 def main():
 
     N_SAT = 32
-
-    data_file_name = "../data/spoofed_data_shuffled2.csv"
-    data = pd.read_csv(data_file_name)
 
     names = ["Logistic Regression", "Nearest Neighbors", "Linear SVM", "RBF SVM",
              "Decision Tree", "Random Forest", "Neural Net", "AdaBoost"]
@@ -36,18 +37,6 @@ def main():
         MLPClassifier(solver="lbfgs"),
         AdaBoostClassifier()
     ]
-
-    # We will train our classifier with the following features:
-    # Numeric Features:
-    # - time_sin: float.
-    # - time_cos: float.
-    # - lat_sin: float.
-    # - lat_cos: float.
-    # - long_sin: float.
-    # - long_cos: float.
-    # - n_satellites: int
-    # Categorical Features:
-    # - sv_prn_i: categories encoded as integers {0, 1}.
 
     # We create the preprocessing pipelines for both numeric and categorical data.
     numeric_features = ['time_sin', 'time_cos', 'lat_sin', 'lat_cos', 'long_sin', 'long_cos', 'n_satellites']
@@ -67,31 +56,39 @@ def main():
             ('num', numeric_transformer, numeric_features),
             ('cat', categorical_transformer, categorical_features)])
 
-    X = data.drop('spoofed', axis=1)
-    y = data['spoofed']
+    data_train_file_name = "../data/spoofed_data_shuffled2.csv"
+    data_train = pd.read_csv(data_train_file_name)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y)
+    X_train = data_train.drop('spoofed',axis=1)
+    y_train = data_train['spoofed']
+
+    data_test_file_name = "../data/day40attack.csv"
+    data_test = pd.read_csv(data_test_file_name)
+
+    X_test = data_test.drop('spoofed', axis=1)
+    y_test = data_test['spoofed']
 
     # iterate over classifiers
     for name, classifier in zip(names, classifiers):
-        clf = Pipeline(steps=[('preprocessor', preprocessor),
-                              ('classifier', classifier)])
 
-        """
-        
-        This was done traditionally, without using a K-fold cross-validation method.
-        
-        clf.fit(X_train, y_train)
-        score = clf.score(X_test, y_test)
+        if name == "Decision Tree":
+            print("==> Classifier: " + name)
+            clf = Pipeline(steps=[('preprocessor', preprocessor),
+                                  ('classifier', classifier)])
 
-        print("==> Classifier: " + name)
-        print("\tScore: %.3f" % score)
-        """
+            clf.fit(X_train, y_train)
+            preds= clf.predict(X_test)
 
-        #  mean score and the 95% confidence interval of the score
-        scores = cross_val_score(clf, X, y, cv=StratifiedKFold(n_splits=10, shuffle=True))
-        print("==> Classifier: " + name)
-        print("\tAccuracy: %0.3f (+/- %0.3f)" % (scores.mean(), scores.std() * 2))
+            scores = {0: 0, 1: 0, 2: 0}
+            for prediction in preds:
+                scores[prediction] += 1
+
+            print(scores)
+
+            score = accuracy_score(y_test, preds)
+            print("Accuracy:   %0.3f" % score)
+
+
 
 
 if __name__ == '__main__':

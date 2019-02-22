@@ -1,4 +1,4 @@
-from random import randint
+from random import randint, shuffle
 from math import sin, cos, pi
 
 def get_data_from_file(file, spoofed=False):
@@ -41,7 +41,7 @@ def get_data_from_file(file, spoofed=False):
     return dataset, dataset_labels
 
 
-def get_data_from_file_2(file, spoofed=False):
+def get_data_from_file_2(file, label=0):
     sample_file = open(file, 'r')
     dataset = []
     dataset_labels = []
@@ -57,21 +57,14 @@ def get_data_from_file_2(file, spoofed=False):
         fields = line.split(',')
         message_ID = fields[0]
 
-        # check if we have become stable
-        if not stable:
-            # we'll never become stable if not GPGGA
-            if message_ID != "$GPGGA":
-                line_index += 1
-                continue
+        # check if we are stable or not
+        if message_ID == "$GPGGA":
+            gps_qi = int(check_if_null(fields[6]))
+            if gps_qi != 0:
+                stable = True
             else:
-                gps_qi = int(check_if_null(fields[6]))
-                if gps_qi != 0:
-                    stable = True
-                else:
-                    line_index += 1
-                    continue
-        # we don't use an else since it could happen that we became stable and need to start immediately
-        # an else would make us loose the first elements
+                stable = False
+
         if stable:
             if message_ID == "$GPGGA":
                 single_entry = get_GGA_entry_as_array(line)
@@ -93,14 +86,17 @@ def get_data_from_file_2(file, spoofed=False):
                 line_index += 1
 
                 dataset.append(single_entry)
-                dataset_labels.append(randint(0, 1))
+                dataset_labels.append(label)
             else:
                 line_index += 1
+        else:
+            # not stable
+            line_index += 1
 
     return dataset, dataset_labels
 
 
-def get_numeric_data_from_file(file, spoofed=False):
+def get_numeric_data_from_file(file, label=0):
     LEN_GPGSV_ENTRY = 65
 
     sample_file = open(file, 'r')
@@ -118,21 +114,14 @@ def get_numeric_data_from_file(file, spoofed=False):
         fields = line.split(',')
         message_ID = fields[0]
 
-        # check if we have become stable
-        if not stable:
-            # we'll never become stable if not GPGGA
-            if message_ID != "$GPGGA":
-                line_index += 1
-                continue
+        # check if we are stable or not
+        if message_ID == "$GPGGA":
+            gps_qi = int(check_if_null(fields[6]))
+            if gps_qi != 0:
+                stable = True
             else:
-                gps_qi = int(check_if_null(fields[6]))
-                if gps_qi != 0:
-                    stable = True
-                else:
-                    line_index += 1
-                    continue
-        # we don't use an else since it could happen that we became stable and need to start immediately
-        # an else would make us loose the first elements
+                stable = False
+
         if stable:
             if message_ID == "$GPGGA":
                 single_entry = []
@@ -169,17 +158,21 @@ def get_numeric_data_from_file(file, spoofed=False):
 
                 for prn_index in range(1, LEN_GPGSV_ENTRY, 4):
                     sat_prn = GSV_entry[prn_index]
-                    # we have 32 sv and we'll set sv_prn_i by accessing sv_prn_i - 1
-                    sv_prns[int(sat_prn) - 1] = '1'
+                    if sat_prn != '-1':
+                        # we have 32 sv and we'll set sv_prn_i by accessing sv_prn_i - 1
+                        sv_prns[int(sat_prn) - 1] = '1'
 
                 single_entry += sv_prns
 
                 line_index += total_number_of_messages
 
                 dataset.append(single_entry)
-                dataset_labels.append(randint(0, 1))
+                dataset_labels.append(label)
             else:
                 line_index += 1
+        else:
+            # not stable
+            line_index += 1
 
     return dataset, dataset_labels
 
@@ -439,6 +432,58 @@ def transform_data_for_numeric_into_CSV(file):
     csv_file.close()
 
 
+def transform_data_for_numeric_into_CSV_2(filenames, y, mix=False, csv_name="data.csv"):
+
+    dataset = []
+    dataset_labels = []
+    for file_index in range(len(filenames)):
+        dataset_temp, dataset_labels_temp = get_numeric_data_from_file(filenames[file_index], y[file_index])
+        dataset += dataset_temp
+        dataset_labels += dataset_labels_temp
+
+    if mix:
+        temp = list(zip(dataset, dataset_labels))
+        shuffle(temp)
+        dataset, dataset_labels = zip(*temp)
+
+    csv_file = open(csv_name, "w")
+    GPS_TOTAL_SAT = 32
+
+    labels = "spoofed,time_sin,time_cos,lat_sin,lat_cos,long_sin,long_cos,n_satellites,"
+
+    for i in range(1, GPS_TOTAL_SAT):
+        labels += "sv_prn_" + str(i) + ","
+
+    labels += "sv_prn_" + str(GPS_TOTAL_SAT) + "\n"
+
+    csv_file.write(labels)
+
+    for elem in dataset:
+        print(elem)
+
+    print(dataset_labels)
+
+    sample_index = 0
+    features_length = len(dataset[0])
+    for sample in dataset:
+        entry = ""
+        counter = 0
+
+        for feature in sample:
+            if counter < features_length - 1:
+                entry += feature + ","
+            else:
+                entry += feature + "\n"
+            counter += 1
+
+        csv_file.write(str(dataset_labels[sample_index]) + ",")
+        sample_index += 1
+        csv_file.write(entry)
+
+    csv_file.close()
+
+
+
 def get_GGA_entry_as_array(entry):
     fields = entry.split(',')
 
@@ -660,6 +705,31 @@ def lat_long_to_sin_cos(nmea_lat, type="lat", direction="N"):
     return sin(pi * degrees / TOTAL), cos(pi * degrees / TOTAL)
 
 
+def get_satellites():
+    dataset0, labels0 = get_numeric_data_from_file("../data/day39spoof.txt", label=0)
+    dataset1, labels1 = get_numeric_data_from_file("../data/day40spoof.txt", label=1)
+    dataset2, labels2 = get_numeric_data_from_file("../data/day41spoof.txt", label=2)
+
+    satellites_0 = set()
+    satellites_1 = set()
+    satellites_2 = set()
+
+    for elem in dataset0:
+        for elem_index in range(7,39):
+            if elem[elem_index] != '0':
+                satellites_0.add(elem_index - 6)
+
+    for elem in dataset1:
+        for elem_index in range(7,39):
+            if elem[elem_index] != '0':
+                satellites_1.add(elem_index - 6)
+
+    for elem in dataset2:
+        for elem_index in range(7,39):
+            if elem[elem_index] != '0':
+                satellites_2.add(elem_index - 6)
+
+
 def transform_data_into_numeric(file):
     sample_file = open(file, 'r')
     entries = []
@@ -691,6 +761,14 @@ def transform_data_into_numeric(file):
 
             else:
                 continue
+
+
+def concatenate_files(filenames):
+    with open("../data/spoofed_data.txt",'w') as outfile:
+        for fname in filenames:
+            with open(fname) as infile:
+                for line in infile:
+                    outfile.write(line)
 
 
 def check_if_null(elem):
