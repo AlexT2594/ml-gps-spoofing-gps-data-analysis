@@ -1,6 +1,7 @@
 from random import randint, shuffle
 from math import sin, cos, pi
 
+
 def get_data_from_file(file, spoofed=False):
     sample_file = open(file, 'r')
     dataset = []
@@ -177,6 +178,75 @@ def get_numeric_data_from_file(file, label=0):
     return dataset, dataset_labels
 
 
+def get_sv_info_from_file(file, label=0):
+    LEN_GPGSV_ENTRY = 65
+
+    sample_file = open(file, 'r')
+    dataset = []
+    dataset_labels = []
+    single_entry = []
+    stable = False
+
+    lines = sample_file.readlines()
+    line_index = 0
+    lines_count = len(lines)
+
+
+    while line_index < lines_count:
+        line = lines[line_index]
+        fields = line.split(',')
+        message_ID = fields[0]
+
+        # check if we are stable or not
+        if message_ID == "$GPGGA":
+            gps_qi = int(check_if_null(fields[6]))
+            if gps_qi != 0:
+                stable = True
+            else:
+                stable = False
+
+        if stable:
+            if message_ID == "$GPGSV":
+                fields = line.split(',')
+                total_number_of_messages = int(fields[1])
+                GSV_messages = []
+                for GSV_index in range(line_index, line_index + total_number_of_messages):
+                    GSV_messages.append(lines[GSV_index])
+
+                GSV_entry = get_GSV_entry_as_array(GSV_messages)
+
+
+
+                sv_info = ['0'] * ( 32 * 3 )
+                single_entry = []
+
+                for sv_index in range(1, LEN_GPGSV_ENTRY, 4):
+                    sat_prn = int(GSV_entry[sv_index])
+
+                    if sat_prn != -1:
+
+                        sv_info_index = (sat_prn - 1) * 3
+                        # we have 32 sv and we'll set sv_prn_i by accessing sv_prn_i - 1
+                        sv_info[sv_info_index] = GSV_entry[sv_index + 1]
+                        sv_info[sv_info_index + 1] = GSV_entry[sv_index + 2]
+                        sv_info[sv_info_index + 2] = GSV_entry[sv_index + 3]
+
+                single_entry += sv_info
+
+                line_index += total_number_of_messages
+
+                dataset.append(single_entry)
+                dataset_labels.append(label)
+            else:
+                line_index += 1
+        else:
+            # not stable
+            line_index += 1
+
+
+    return dataset, dataset_labels
+
+
 def get_lat_long_entries_from_file(file):
     sample_file = open(file, 'r')
     lat_long_entries = []
@@ -208,6 +278,7 @@ def get_lat_long_entries_from_file(file):
                 continue
 
     return lat_long_entries
+
 
 def get_lat_long_info_from_file(file):
     """
@@ -397,23 +468,40 @@ def transform_data_into_CSV(file):
     csv_file.close()
 
 
-def transform_data_for_numeric_into_CSV(file):
-    dataset, dataset_labels = get_numeric_data_from_file(file)
-    csv_file_name = ".." + file.split(".")[2] + "_numeric.csv"
-    csv_file = open(csv_file_name, "w")
+def transform_data_for_numeric_into_CSV(filenames, y, mix=False, csv_name="data.csv"):
+    dataset = []
+    dataset_labels = []
+    for file_index in range(len(filenames)):
+        dataset_temp, dataset_labels_temp = get_sv_info_from_file(filenames[file_index], y[file_index])
+        dataset += dataset_temp
+        dataset_labels += dataset_labels_temp
+
+    if mix:
+        temp = list(zip(dataset, dataset_labels))
+        shuffle(temp)
+        dataset, dataset_labels = zip(*temp)
+
+    csv_file = open(csv_name, "w")
     GPS_TOTAL_SAT = 32
 
-    labels = "spoofed,time_sin,time_cos,lat_sin,lat_cos,long_sin,long_cos,n_satellites,"
+    labels = "spoofed,"
 
     for i in range(1, GPS_TOTAL_SAT):
-        labels += "sv_prn_" + str(i) + ","
+        labels += "sv_elev_" + str(i) + ","
+        labels += "sv_azimuth_" + str(i) + ","
+        labels += "sv_snr_" + str(i) + ","
 
-    labels += "sv_prn_" + str(GPS_TOTAL_SAT) + "\n"
+    labels += "sv_elev_" + str(GPS_TOTAL_SAT) + ","
+    labels += "sv_azimuth_" + str(GPS_TOTAL_SAT) + ","
+    labels += "sv_snr_" + str(GPS_TOTAL_SAT) + "\n"
 
     csv_file.write(labels)
 
+    print(dataset[0])
+
     sample_index = 0
     features_length = len(dataset[0])
+
     for sample in dataset:
         entry = ""
         counter = 0
@@ -423,8 +511,10 @@ def transform_data_for_numeric_into_CSV(file):
                 entry += feature + ","
             else:
                 entry += feature + "\n"
+
             counter += 1
 
+        #csv_file.write(str(randint(0,1)) + ",")
         csv_file.write(str(dataset_labels[sample_index]) + ",")
         sample_index += 1
         csv_file.write(entry)
