@@ -5,6 +5,7 @@ import numpy as np
 
 def main():
     print("==> Lat/Long Analysis")
+    print("\tDifference between adjacent entries analysis")
 
     lat_long_entries = get_lat_long_entries_from_file("../data/work_route_sample.txt")
 

@@ -178,6 +178,56 @@ def get_numeric_data_from_file(file, label=0):
     return dataset, dataset_labels
 
 
+def get_DOP_info_from_file(file, label=0):
+
+    sample_file = open(file, 'r')
+    dataset = []
+    dataset_labels = []
+    stable = False
+
+    lines = sample_file.readlines()
+    line_index = 0
+    lines_count = len(lines)
+
+    while line_index < lines_count:
+        line = lines[line_index]
+        fields = line.split(',')
+        message_ID = fields[0]
+
+        # check if we are stable or not
+        if message_ID == "$GPGGA":
+            gps_qi = int(check_if_null(fields[6]))
+            if gps_qi != 0:
+                stable = True
+            else:
+                stable = False
+
+        if stable:
+            if message_ID == "$GPGSA":
+                GSA_entry = get_GSA_entry_as_array(line)
+                single_entry = list()
+                single_entry.append(GSA_entry[14])
+                single_entry.append(GSA_entry[15])
+                single_entry.append(GSA_entry[16])
+
+                line_index += 1
+
+                #outliers could heavily influence our analysis, so we don't add them
+                if GSA_entry[15] == '99.0':
+                    continue
+
+                dataset.append(single_entry)
+                dataset_labels.append(label)
+                #dataset_labels.append(randint(0, 1))
+            else:
+                line_index += 1
+        else:
+            # not stable
+            line_index += 1
+
+    return dataset, dataset_labels
+
+
 def get_sv_info_from_file(file, label=0):
     LEN_GPGSV_ENTRY = 65
 
@@ -566,6 +616,49 @@ def transform_data_for_numeric_into_CSV_2(filenames, y, mix=False, csv_name="dat
                 entry += feature + "\n"
             counter += 1
 
+        csv_file.write(str(dataset_labels[sample_index]) + ",")
+        sample_index += 1
+        csv_file.write(entry)
+
+    csv_file.close()
+
+
+def transform_data_for_DOP_analysis_into_CSV(filenames, y, mix=False, csv_name="data.csv"):
+    dataset = []
+    dataset_labels = []
+    for file_index in range(len(filenames)):
+        dataset_temp, dataset_labels_temp = get_DOP_info_from_file(filenames[file_index], y[file_index])
+        dataset += dataset_temp
+        dataset_labels += dataset_labels_temp
+
+    if mix:
+        temp = list(zip(dataset, dataset_labels))
+        shuffle(temp)
+        dataset, dataset_labels = zip(*temp)
+
+    csv_file = open(csv_name, "w")
+
+    labels = "spoofed,PDOP,HDOP,VDOP\n"
+    csv_file.write(labels)
+
+    print(dataset[0])
+
+    sample_index = 0
+    features_length = len(dataset[0])
+
+    for sample in dataset:
+        entry = ""
+        counter = 0
+
+        for feature in sample:
+            if counter < features_length - 1:
+                entry += feature + ","
+            else:
+                entry += feature + "\n"
+
+            counter += 1
+
+        #csv_file.write(str(randint(0,1)) + ",")
         csv_file.write(str(dataset_labels[sample_index]) + ",")
         sample_index += 1
         csv_file.write(entry)
