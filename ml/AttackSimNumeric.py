@@ -20,7 +20,6 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from utils.data import get_numeric_data_from_file
 from random import shuffle
 
-
 def main():
 
     N_SAT = 32
@@ -39,57 +38,51 @@ def main():
         AdaBoostClassifier()
     ]
 
-    # We create the preprocessing pipelines for both numeric and categorical data.
-    numeric_features = ['time_sin', 'time_cos', 'lat_sin', 'lat_cos', 'long_sin', 'long_cos', 'n_satellites']
+    # We create the preprocessing pipelines for numeric data
+    numeric_features = []
     # numeric_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='median')),
     # ('scaler', StandardScaler())])
-    numeric_transformer = Pipeline(steps=[('imputer', SimpleImputer())])
 
-    categorical_features = []
     for i in range(1, N_SAT + 1):
-        category = "sv_prn_" + str(i)
-        categorical_features.append(category)
-    categorical_transformer = Pipeline(steps=[('imputer', SimpleImputer()),
-                                              ('onehot', OneHotEncoder(handle_unknown='ignore'))])
+        numeric_features.append("sv_elev_" + str(i))
+        numeric_features.append("sv_azimuth_" + str(i))
+        numeric_features.append("sv_snr_" + str(i))
+
+    numeric_features += ["PDOP", "HDOP", "VDOP"]
+
+    numeric_transformer = Pipeline(steps=[('imputer', SimpleImputer())])
 
     preprocessor = ColumnTransformer(
         transformers=[
-            ('num', numeric_transformer, numeric_features),
-            ('cat', categorical_transformer, categorical_features)])
+            ('num', numeric_transformer, numeric_features)])
 
-    data_train_file_name = "../data/spoofed_data_shuffled2.csv"
-    data_train = pd.read_csv(data_train_file_name)
+    data_file_name = "../data/attack_sim_sv_info_DOP_analysis.csv"
+    data = pd.read_csv(data_file_name)
 
-    X_train = data_train.drop('spoofed',axis=1)
-    y_train = data_train['spoofed']
-
-    data_test_file_name = "../data/day40attack.csv"
-    data_test = pd.read_csv(data_test_file_name)
-
-    X_test = data_test.drop('spoofed', axis=1)
-    y_test = data_test['spoofed']
+    X = data.drop('spoofed', axis=1)
+    y = data['spoofed']
 
     # iterate over classifiers
     for name, classifier in zip(names, classifiers):
+        clf = Pipeline(steps=[('preprocessor', preprocessor),
+                              ('classifier', classifier)])
 
-        if name == "Decision Tree":
-            print("==> Classifier: " + name)
-            clf = Pipeline(steps=[('preprocessor', preprocessor),
-                                  ('classifier', classifier)])
+        """
 
-            clf.fit(X_train, y_train)
-            preds= clf.predict(X_test)
+        This was done traditionally, without using a K-fold cross-validation method.
 
-            scores = {0: 0, 1: 0, 2: 0}
-            for prediction in preds:
-                scores[prediction] += 1
+        clf.fit(X_train, y_train)
+        score = clf.score(X_test, y_test)
 
-            print(scores)
+        print("==> Classifier: " + name)
+        print("\tScore: %.3f" % score)
+        """
 
-            score = accuracy_score(y_test, preds)
-            print("Accuracy:   %0.3f" % score)
+        #  mean score and the 95% confidence interval of the score
+        scores = cross_val_score(clf, X, y, cv=StratifiedKFold(n_splits=10, shuffle=True))
+        print("==> Classifier: " + name)
+        print("\tAccuracy: %0.3f (+/- %0.3f)" % (scores.mean(), scores.std() * 2))
 
 
 if __name__ == '__main__':
     main()
-

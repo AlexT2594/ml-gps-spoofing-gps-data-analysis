@@ -20,9 +20,8 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from utils.data import get_numeric_data_from_file
 from random import shuffle
 
-def main():
 
-    N_SAT = 32
+def main():
 
     names = ["Logistic Regression", "Nearest Neighbors", "Linear SVM", "RBF SVM",
              "Decision Tree", "Random Forest", "Neural Net", "AdaBoost"]

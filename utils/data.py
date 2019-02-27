@@ -241,7 +241,6 @@ def get_sv_info_from_file(file, label=0):
     line_index = 0
     lines_count = len(lines)
 
-
     while line_index < lines_count:
         line = lines[line_index]
         fields = line.split(',')
@@ -264,8 +263,6 @@ def get_sv_info_from_file(file, label=0):
                     GSV_messages.append(lines[GSV_index])
 
                 GSV_entry = get_GSV_entry_as_array(GSV_messages)
-
-
 
                 sv_info = ['0'] * ( 32 * 3 )
                 single_entry = []
@@ -293,8 +290,90 @@ def get_sv_info_from_file(file, label=0):
             # not stable
             line_index += 1
 
+    return dataset, dataset_labels
+
+def get_sv_DOP_info_from_file(file, label):
+    LEN_GPGSV_ENTRY = 65
+
+    sample_file = open(file, 'r')
+    dataset = []
+    dataset_labels = []
+    stable = False
+    single_entry = []
+    lines = sample_file.readlines()
+    line_index = 0
+    lines_count = len(lines)
+
+
+    while line_index < lines_count:
+        line = lines[line_index]
+        fields = line.split(',')
+        message_ID = fields[0]
+
+        # check if we are stable or not
+        if message_ID == "$GPGGA":
+            gps_qi = int(check_if_null(fields[6]))
+            if gps_qi != 0:
+                stable = True
+            else:
+                stable = False
+
+        if stable:
+
+            if message_ID == "$GPGSV":
+                fields = line.split(',')
+                total_number_of_messages = int(fields[1])
+                GSV_messages = []
+                for GSV_index in range(line_index, line_index + total_number_of_messages):
+                    GSV_messages.append(lines[GSV_index])
+
+                GSV_entry = get_GSV_entry_as_array(GSV_messages)
+
+                sv_info = ['0'] * ( 32 * 3 )
+
+                for sv_index in range(1, LEN_GPGSV_ENTRY, 4):
+                    sat_prn = int(GSV_entry[sv_index])
+
+                    if sat_prn != -1:
+
+                        sv_info_index = (sat_prn - 1) * 3
+                        # we have 32 sv and we'll set sv_prn_i by accessing sv_prn_i - 1
+                        sv_info[sv_info_index] = GSV_entry[sv_index + 1]
+                        sv_info[sv_info_index + 1] = GSV_entry[sv_index + 2]
+                        sv_info[sv_info_index + 2] = GSV_entry[sv_index + 3]
+
+                single_entry += sv_info
+
+                line_index += total_number_of_messages
+
+            elif message_ID == "$GPGSA":
+                GSA_entry = get_GSA_entry_as_array(line)
+
+
+                single_entry.append(GSA_entry[14])
+                single_entry.append(GSA_entry[15])
+                single_entry.append(GSA_entry[16])
+
+                line_index += 1
+
+                #outliers could heavily influence our analysis, so we don't add them
+                if GSA_entry[15] == '99.0':
+                    single_entry = []
+                    continue
+
+                dataset.append(single_entry)
+                dataset_labels.append(label)
+
+                single_entry = []
+                #dataset_labels.append(randint(0, 1))
+            else:
+                line_index += 1
+        else:
+            # not stable
+            line_index += 1
 
     return dataset, dataset_labels
+
 
 
 def get_lat_long_entries_from_file(file):
@@ -665,6 +744,57 @@ def transform_data_for_DOP_analysis_into_CSV(filenames, y, mix=False, csv_name="
 
     csv_file.close()
 
+
+def transform_data_for_sv_info_DOP_analysis_into_CSV(filenames, y, mix=False, csv_name="data.csv"):
+    dataset = []
+    dataset_labels = []
+    for file_index in range(len(filenames)):
+        dataset_temp, dataset_labels_temp = get_sv_DOP_info_from_file(filenames[file_index], y[file_index])
+        dataset += dataset_temp
+        dataset_labels += dataset_labels_temp
+
+    if mix:
+        temp = list(zip(dataset, dataset_labels))
+        shuffle(temp)
+        dataset, dataset_labels = zip(*temp)
+
+    csv_file = open(csv_name, "w")
+    GPS_TOTAL_SAT = 32
+
+    labels = "spoofed,"
+
+    for i in range(1, GPS_TOTAL_SAT + 1):
+        labels += "sv_elev_" + str(i) + ","
+        labels += "sv_azimuth_" + str(i) + ","
+        labels += "sv_snr_" + str(i) + ","
+
+    labels += "PDOP,HDOP,VDOP\n"
+
+    csv_file.write(labels)
+
+    print(dataset[0])
+
+    sample_index = 0
+    features_length = len(dataset[0])
+
+    for sample in dataset:
+        entry = ""
+        counter = 0
+
+        for feature in sample:
+            if counter < features_length - 1:
+                entry += feature + ","
+            else:
+                entry += feature + "\n"
+
+            counter += 1
+
+        #csv_file.write(str(randint(0,1)) + ",")
+        csv_file.write(str(dataset_labels[sample_index]) + ",")
+        sample_index += 1
+        csv_file.write(entry)
+
+    csv_file.close()
 
 
 def get_GGA_entry_as_array(entry):
