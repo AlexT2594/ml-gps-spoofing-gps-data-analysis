@@ -102,7 +102,7 @@ def main():
     consumer_process.start()
 
     xs = []
-    ys = []
+    ys = [[], []]
 
     # Set up plot to call animate() function periodically
     ani = animation.FuncAnimation(fig, animate, fargs=(queue, xs, ys), interval=1000)
@@ -111,18 +111,21 @@ def main():
 
 def animate(i, q, xs, ys):
     xs.append(dt.datetime.now().strftime('%H:%M:%S'))
-    ys.append(q.get())
+    predictions = q.get()
+    ys[0].append(predictions[0])
+    ys[1].append(predictions[1])
 
     # Limit x and y lists to 20 items
     xs = xs[-20:]
-    ys = ys[-20:]
+    ys[0] = ys[0][-20:]
+    ys[1] = ys[1][-20:]
 
     # Draw x and y lists
     ax1.clear()
-    ax1.plot(xs, ys)
+    ax1.plot(xs, ys[0])
 
     ax2.clear()
-    ax2.plot(xs, ys)
+    ax2.plot(xs, ys[1])
 
     # Format plot
     ax1.set_title('Logistic Regression Analysis')
@@ -151,11 +154,15 @@ def consumeData(queue, classifiers):
         pred1 = clf.predict(X_test)
         if pred1[0] == 0:
             pred1 = -1
+        else:
+            pred1 = 1
 
         clf = classifiers[1]
         pred2 = clf.predict(X_test)
         if pred2[0] == 0:
             pred2 = -1
+        else:
+            pred2 = 1
 
         queue.put([pred1, pred2])
 
