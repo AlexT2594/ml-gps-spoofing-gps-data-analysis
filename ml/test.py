@@ -6,8 +6,8 @@ import numpy as np
 
 def main():
 
-    transform_data_for_sv_info_DOP_analysis_into_CSV(["../data/day39spoof11utc.txt", "../data/true_data.txt"], [1, 0],
-                                                     True, "../data/attack_sim_sv_info_DOP_analysis.csv")
+    transform_data_for_numeric_into_CSV(["../data/day41spoof11utc.txt"], [1], True,
+                                        "../data/day41spoof11utc.csv")
 
     return
 

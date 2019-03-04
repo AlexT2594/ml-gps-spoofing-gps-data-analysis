@@ -2,6 +2,7 @@ from utils.data import get_lat_long_entries_from_file
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 def main():
     print("==> Lat/Long Analysis")
     print("\tActual position analysis")

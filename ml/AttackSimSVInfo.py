@@ -20,8 +20,8 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from utils.data import get_numeric_data_from_file
 from random import shuffle
 
-def main():
 
+def main():
     N_SAT = 32
 
     names = ["Logistic Regression", "Nearest Neighbors", "Linear SVM", "RBF SVM",
@@ -54,6 +54,32 @@ def main():
         transformers=[
             ('num', numeric_transformer, numeric_features)])
 
+    data_train_file_name = "../data/day39_40_spoof_with_true_data1.csv"
+    data_train = pd.read_csv(data_train_file_name)
+
+    X_train = data_train.drop('spoofed', axis=1)
+    y_train = data_train['spoofed']
+
+    data_test_file_name = "../data/day41spoof11utc.csv"
+    data_test = pd.read_csv(data_test_file_name)
+
+    X_test = data_test.drop('spoofed', axis=1)
+    y_test = data_test['spoofed']
+
+    # iterate over classifiers
+    for name, classifier in zip(names, classifiers):
+        print("==> Classifier: " + name)
+        clf = Pipeline(steps=[('preprocessor', preprocessor),
+                              ('classifier', classifier)])
+
+        clf.fit(X_train, y_train)
+        preds = clf.predict(X_test)
+
+        score = accuracy_score(y_test, preds)
+        print("Accuracy:   %0.3f" % score)
+
+
+"""
     data_file_name = "../data/day39spoofwithtruedata.csv"
     data = pd.read_csv(data_file_name)
 
@@ -65,22 +91,24 @@ def main():
         clf = Pipeline(steps=[('preprocessor', preprocessor),
                               ('classifier', classifier)])
 
-        """
 
-        This was done traditionally, without using a K-fold cross-validation method.
-
-        clf.fit(X_train, y_train)
-        score = clf.score(X_test, y_test)
-
-        print("==> Classifier: " + name)
-        print("\tScore: %.3f" % score)
-        """
 
         #  mean score and the 95% confidence interval of the score
         scores = cross_val_score(clf, X, y, cv=StratifiedKFold(n_splits=10, shuffle=True))
         print("==> Classifier: " + name)
         print("\tAccuracy: %0.3f (+/- %0.3f)" % (scores.mean(), scores.std() * 2))
+"""
 
+"""
+
+This was done traditionally, without using a K-fold cross-validation method.
+
+clf.fit(X_train, y_train)
+score = clf.score(X_test, y_test)
+
+print("==> Classifier: " + name)
+print("\tScore: %.3f" % score)
+"""
 
 if __name__ == '__main__':
     main()
