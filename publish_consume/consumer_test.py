@@ -1,4 +1,7 @@
+import pandas as pd
+from pandas.compat import StringIO
 from kafka import KafkaConsumer
+from utils.data import gen_test_entry
 
 def main():
     print("==> Spoofing detection on!")
@@ -11,7 +14,15 @@ def main():
 
     for msg in consumer:
         entry = msg.value.decode('utf-8')
-        print(entry)
+
+        data_test = gen_test_entry(entry)
+        if data_test == "":
+            continue
+
+        X_test = pd.read_csv(StringIO(data_test))
+
+        print(X_test)
+        break
 
     consumer.close()
 

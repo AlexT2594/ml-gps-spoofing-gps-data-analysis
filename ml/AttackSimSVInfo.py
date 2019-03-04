@@ -66,6 +66,8 @@ def main():
     X_test = data_test.drop('spoofed', axis=1)
     y_test = data_test['spoofed']
 
+    print(X_test)
+
     # iterate over classifiers
     for name, classifier in zip(names, classifiers):
         print("==> Classifier: " + name)

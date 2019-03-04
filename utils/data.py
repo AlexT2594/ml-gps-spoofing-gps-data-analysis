@@ -153,7 +153,7 @@ def get_numeric_data_from_file(file, label=0):
                     GSV_messages.append(lines[GSV_index])
 
                 GSV_entry = get_GSV_entry_as_array(GSV_messages)
-                single_entry.append(GSV_entry[0]) # which is the total number of satellites
+                single_entry.append(GSV_entry[0])  # which is the total number of satellites
 
                 sv_prns = ['0'] * 32
 
@@ -179,7 +179,6 @@ def get_numeric_data_from_file(file, label=0):
 
 
 def get_DOP_info_from_file(file, label=0):
-
     sample_file = open(file, 'r')
     dataset = []
     dataset_labels = []
@@ -212,13 +211,13 @@ def get_DOP_info_from_file(file, label=0):
 
                 line_index += 1
 
-                #outliers could heavily influence our analysis, so we don't add them
+                # outliers could heavily influence our analysis, so we don't add them
                 if GSA_entry[15] == '99.0':
                     continue
 
                 dataset.append(single_entry)
                 dataset_labels.append(label)
-                #dataset_labels.append(randint(0, 1))
+                # dataset_labels.append(randint(0, 1))
             else:
                 line_index += 1
         else:
@@ -264,14 +263,13 @@ def get_sv_info_from_file(file, label=0):
 
                 GSV_entry = get_GSV_entry_as_array(GSV_messages)
 
-                sv_info = ['0'] * ( 32 * 3 )
+                sv_info = ['0'] * (32 * 3)
                 single_entry = []
 
                 for sv_index in range(1, LEN_GPGSV_ENTRY, 4):
                     sat_prn = int(GSV_entry[sv_index])
 
                     if sat_prn != -1:
-
                         sv_info_index = (sat_prn - 1) * 3
                         # we have 32 sv and we'll set sv_prn_i by accessing sv_prn_i - 1
                         sv_info[sv_info_index] = GSV_entry[sv_index + 1]
@@ -292,6 +290,7 @@ def get_sv_info_from_file(file, label=0):
 
     return dataset, dataset_labels
 
+
 def get_sv_DOP_info_from_file(file, label):
     LEN_GPGSV_ENTRY = 65
 
@@ -303,7 +302,6 @@ def get_sv_DOP_info_from_file(file, label):
     lines = sample_file.readlines()
     line_index = 0
     lines_count = len(lines)
-
 
     while line_index < lines_count:
         line = lines[line_index]
@@ -329,13 +327,12 @@ def get_sv_DOP_info_from_file(file, label):
 
                 GSV_entry = get_GSV_entry_as_array(GSV_messages)
 
-                sv_info = ['0'] * ( 32 * 3 )
+                sv_info = ['0'] * (32 * 3)
 
                 for sv_index in range(1, LEN_GPGSV_ENTRY, 4):
                     sat_prn = int(GSV_entry[sv_index])
 
                     if sat_prn != -1:
-
                         sv_info_index = (sat_prn - 1) * 3
                         # we have 32 sv and we'll set sv_prn_i by accessing sv_prn_i - 1
                         sv_info[sv_info_index] = GSV_entry[sv_index + 1]
@@ -349,14 +346,13 @@ def get_sv_DOP_info_from_file(file, label):
             elif message_ID == "$GPGSA":
                 GSA_entry = get_GSA_entry_as_array(line)
 
-
                 single_entry.append(GSA_entry[14])
                 single_entry.append(GSA_entry[15])
                 single_entry.append(GSA_entry[16])
 
                 line_index += 1
 
-                #outliers could heavily influence our analysis, so we don't add them
+                # outliers could heavily influence our analysis, so we don't add them
                 if GSA_entry[15] == '99.0':
                     single_entry = []
                     continue
@@ -365,7 +361,7 @@ def get_sv_DOP_info_from_file(file, label):
                 dataset_labels.append(label)
 
                 single_entry = []
-                #dataset_labels.append(randint(0, 1))
+                # dataset_labels.append(randint(0, 1))
             else:
                 line_index += 1
         else:
@@ -373,7 +369,6 @@ def get_sv_DOP_info_from_file(file, label):
             line_index += 1
 
     return dataset, dataset_labels
-
 
 
 def get_lat_long_entries_from_file(file):
@@ -530,6 +525,140 @@ def get_single_elem_from_file(file):
     return dataset, dataset_labels
 
 
+def nmea_log_to_entry(nmea_log):
+    """
+    Transforms the entry, represented as "phrase;phrase;phrase..." into an array of array
+    :param nmea_log: String
+    :return: [[], [], []]
+    """
+
+    entry = {}
+    lines = nmea_log.split(";")
+
+    line_index = 0
+    lines_count = len(lines)
+
+    while line_index < lines_count:
+        line = lines[line_index]
+        fields = line.split(',')
+        message_ID = fields[0]
+
+        # check if we are stable or not
+        if message_ID == "$GPGGA":
+            gps_qi = int(check_if_null(fields[6]))
+            if gps_qi == 0:
+                return {}  # a result with len == 0 will tell us that the entry is not stable
+
+        if message_ID == "$GPGGA":
+            single_phrase = get_GGA_entry_as_array(line)
+            entry[message_ID] = single_phrase
+            line_index += 1
+        elif message_ID == "$GPGSV" or message_ID == "$GLGSV":
+            fields = line.split(',')
+            total_number_of_messages = int(fields[1])
+            GSV_messages = []
+            for GSV_index in range(line_index, line_index + total_number_of_messages):
+                GSV_messages.append(lines[GSV_index])
+
+            single_phrase = get_GSV_entry_as_array(GSV_messages)
+            entry[message_ID] = single_phrase
+            line_index += total_number_of_messages
+        elif message_ID == "$GPGSA" or message_ID == "$GNGSA":
+            single_phrase = get_GSA_entry_as_array(line)
+            entry[message_ID] = single_phrase
+            line_index += 1
+        elif message_ID == "$GPRMC":
+            single_phrase = get_RMC_entry_as_array(line)
+            entry[message_ID] = single_phrase
+            line_index += 1
+
+        else:
+            line_index += 1
+
+    return entry
+
+
+def get_DOP_from_single_entry(entry):
+    """
+    From entry of type {$GPGGA: [], $GPGSV: []} gets the DOP values as array
+    :param entry: {String: [], String: []}
+    :return: []
+    """
+
+    DOP_values = []
+    GSA_entry = entry["$GPGSA"]
+    DOP_values.append(GSA_entry[14])
+    DOP_values.append(GSA_entry[15])
+    DOP_values.append(GSA_entry[16])
+
+    return DOP_values
+
+
+def get_sv_info_from_single_entry(entry):
+    """
+    From entry of type {$GPGGA: [], $GPGSV: []} gets the sv info values as array
+    :param entry: {String: [], String: [}
+    :return: []
+    """
+
+    LEN_GPGSV_ENTRY = 65
+
+    GSV_entry = entry["$GPGSV"]
+
+    sv_info = ['0'] * (32 * 3)
+
+    for sv_index in range(1, LEN_GPGSV_ENTRY, 4):
+        sat_prn = int(GSV_entry[sv_index])
+
+        if sat_prn != -1:
+            sv_info_index = (sat_prn - 1) * 3
+            # we have 32 sv and we'll set sv_prn_i by accessing sv_prn_i - 1
+            sv_info[sv_info_index] = GSV_entry[sv_index + 1]
+            sv_info[sv_info_index + 1] = GSV_entry[sv_index + 2]
+            sv_info[sv_info_index + 2] = GSV_entry[sv_index + 3]
+
+    return sv_info
+
+
+def gen_test_entry(lines):
+    """
+    Generates a test entry for the ML algorithms from raw NMEA lines represented as "entry;entry;entry"
+    :param lines: String
+    :return: String
+    """
+
+    GPS_TOTAL_SAT = 32
+
+    test_entry = ""
+
+    labels = ""
+
+    for i in range(1, GPS_TOTAL_SAT + 1):
+        labels += "sv_elev_" + str(i) + ","
+        labels += "sv_azimuth_" + str(i) + ","
+        labels += "sv_snr_" + str(i) + ","
+
+    labels += "PDOP,HDOP,VDOP\n"
+
+    test_entry += labels
+
+    entry = nmea_log_to_entry(lines)
+    if len(entry) == 0:
+        return "" #empty string means we're not stable
+
+    sv_info = get_sv_info_from_single_entry(entry)
+    DOP_info = get_DOP_from_single_entry(entry)
+
+    for elem in sv_info:
+        test_entry += elem + ","
+
+    test_entry += DOP_info[0] + ","
+    test_entry += DOP_info[1] + ","
+    test_entry += DOP_info[2]
+
+    return test_entry
+
+
 def transform_data_into_CSV(file):
     dataset, dataset_labels = get_data_from_file_2(file)
     csv_file_name = ".." + file.split(".")[2] + ".csv"
@@ -643,7 +772,7 @@ def transform_data_for_numeric_into_CSV(filenames, y, mix=False, csv_name="data.
 
             counter += 1
 
-        #csv_file.write(str(randint(0,1)) + ",")
+        # csv_file.write(str(randint(0,1)) + ",")
         csv_file.write(str(dataset_labels[sample_index]) + ",")
         sample_index += 1
         csv_file.write(entry)
@@ -652,7 +781,6 @@ def transform_data_for_numeric_into_CSV(filenames, y, mix=False, csv_name="data.
 
 
 def transform_data_for_numeric_into_CSV_2(filenames, y, mix=False, csv_name="data.csv"):
-
     dataset = []
     dataset_labels = []
     for file_index in range(len(filenames)):
@@ -737,7 +865,7 @@ def transform_data_for_DOP_analysis_into_CSV(filenames, y, mix=False, csv_name="
 
             counter += 1
 
-        #csv_file.write(str(randint(0,1)) + ",")
+        # csv_file.write(str(randint(0,1)) + ",")
         csv_file.write(str(dataset_labels[sample_index]) + ",")
         sample_index += 1
         csv_file.write(entry)
@@ -789,7 +917,7 @@ def transform_data_for_sv_info_DOP_analysis_into_CSV(filenames, y, mix=False, cs
 
             counter += 1
 
-        #csv_file.write(str(randint(0,1)) + ",")
+        # csv_file.write(str(randint(0,1)) + ",")
         csv_file.write(str(dataset_labels[sample_index]) + ",")
         sample_index += 1
         csv_file.write(entry)
@@ -988,7 +1116,7 @@ def utc_to_sin_cos(utc):
     hours = int(utc[:2])
     mins = int(utc[2:4])
     secs = int(utc[4:6])
-    total_secs = hours*60 + mins*60 + secs
+    total_secs = hours * 60 + mins * 60 + secs
 
     return sin(pi * total_secs / TOTAL_SECS_PER_DAY), cos(pi * total_secs / TOTAL_SECS_PER_DAY)
 
@@ -1028,17 +1156,17 @@ def get_satellites():
     satellites_2 = set()
 
     for elem in dataset0:
-        for elem_index in range(7,39):
+        for elem_index in range(7, 39):
             if elem[elem_index] != '0':
                 satellites_0.add(elem_index - 6)
 
     for elem in dataset1:
-        for elem_index in range(7,39):
+        for elem_index in range(7, 39):
             if elem[elem_index] != '0':
                 satellites_1.add(elem_index - 6)
 
     for elem in dataset2:
-        for elem_index in range(7,39):
+        for elem_index in range(7, 39):
             if elem[elem_index] != '0':
                 satellites_2.add(elem_index - 6)
 
@@ -1076,8 +1204,8 @@ def transform_data_into_numeric(file):
                 continue
 
 
-def concatenate_files(filenames):
-    with open("../data/spoofed_data.txt",'w') as outfile:
+def concatenate_files(filenames, fileoutname):
+    with open(fileoutname, 'w') as outfile:
         for fname in filenames:
             with open(fname) as infile:
                 for line in infile:

@@ -2,7 +2,7 @@ from kafka import KafkaProducer
 
 
 def main():
-    messages = get_nmea_entries('../data/day41spoof11utc.txt')
+    messages = get_nmea_entries('../data/true_with_spoof.txt')
     if len(messages) > 0:
         kafka_producer = connect_kafka_producer()
 
@@ -59,6 +59,8 @@ def get_nmea_entries(filename):
             entry += line + ";"
 
     print("Number of entries: " + str(len(entries)))
+
+    return entries
 
 
 if __name__ == '__main__':
