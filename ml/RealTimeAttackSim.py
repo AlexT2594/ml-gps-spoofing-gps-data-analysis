@@ -31,6 +31,9 @@ import time
 import random
 
 import multiprocessing as mp
+from threading import Thread
+
+ALG_LEN = 8
 
 names = ["Logistic Regression", "Nearest Neighbors", "Linear SVM", "RBF SVM",
          "Decision Tree", "Random Forest", "Neural Net", "AdaBoost"]
@@ -38,11 +41,12 @@ names = ["Logistic Regression", "Nearest Neighbors", "Linear SVM", "RBF SVM",
 topic_name = 'raw_nmea'
 
 # Create figure for plotting
-fig, (ax1, ax2) = plt.subplots(2, 1)
-#plt.xticks(rotation=45, ha='right')
-ax1.tick_params(axis='x', rotation=45)
-ax2.tick_params(axis='x', rotation=45)
-plt.subplots_adjust(left=0.2, bottom=0.2, hspace=0.9)
+fig = plt.figure(figsize=(10, 5))
+axes = []
+for i in range(1, ALG_LEN + 1):
+    axes.append(fig.add_subplot(2, 4, i))
+
+plt.subplots_adjust(left=0.15, bottom=0.2, hspace=1.1, wspace=0.3)
 
 
 
@@ -97,12 +101,12 @@ def main():
 
         classifiers.append(clf)
 
-    queue = mp.Queue()
-    consumer_process = mp.Process(target=consumeData, args=(queue, classifiers))
-    consumer_process.start()
-
     xs = []
-    ys = [[], []]
+    ys = [[], [], [], [], [], [], [], []]
+    queue = mp.Queue()
+
+    thread = Thread(target=consumeData, args=(queue, classifiers))
+    thread.start()
 
     # Set up plot to call animate() function periodically
     ani = animation.FuncAnimation(fig, animate, fargs=(queue, xs, ys), interval=1000)
@@ -111,33 +115,40 @@ def main():
 
 def animate(i, q, xs, ys):
     xs.append(dt.datetime.now().strftime('%H:%M:%S'))
-    predictions = q.get()
-    ys[0].append(predictions[0])
-    ys[1].append(predictions[1])
-
-    # Limit x and y lists to 20 items
     xs = xs[-20:]
-    ys[0] = ys[0][-20:]
-    ys[1] = ys[1][-20:]
+    min_time = min(xs)
+    max_time = max(xs)
 
-    # Draw x and y lists
-    ax1.clear()
-    ax1.plot(xs, ys[0])
+    x_labels = [''] * len(xs)
+    x_labels[0] = min_time
+    x_labels[len(xs) - 1] = max_time
 
-    ax2.clear()
-    ax2.plot(xs, ys[1])
+    predictions = q.get()
 
-    # Format plot
-    ax1.set_title('Logistic Regression Analysis')
-    ax1.set_yticks([-2, -1, 0, 1, 2])
-    ax1.set_yticklabels(['', 'Safe', '', 'Spoof Attack!', ''])
+    for i in range(ALG_LEN):
+        ys[i].append(predictions[i])
 
-    ax2.set_title("Nearest Neighbors")
-    ax2.set_yticks([-2, -1, 0, 1, 2])
-    ax2.set_yticklabels(['', 'Safe', '', 'Spoof Attack!', ''])
+        # Limit x and y lists to 20 items
+        ys[i] = ys[i][-20:]
+
+        axes[i].clear()
+        axes[i].plot(xs, ys[i])
+
+        axes[i].set_xticklabels(x_labels)
+
+        axes[i].set_yticks([-2, -1, 0, 1, 2])
+        axes[i].set_title(names[i].replace(' ', '\n'))
+
+        axes[i].tick_params(axis='x', rotation=45)
+
+        if i != 0 and i != 4:
+            axes[i].set_yticklabels(['', '', '', ''])
+        else:
+            axes[i].set_yticklabels(['', 'Safe', '', 'Spoof Attack!', ''])
 
 
 def consumeData(queue, classifiers):
+
     consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9092'])
                              #,consumer_timeout_ms=1000)
 
@@ -150,21 +161,20 @@ def consumeData(queue, classifiers):
 
         X_test = pd.read_csv(StringIO(data_test))
 
-        clf = classifiers[0]
-        pred1 = clf.predict(X_test)
-        if pred1[0] == 0:
-            pred1 = -1
-        else:
-            pred1 = 1
+        predictions =[]
 
-        clf = classifiers[1]
-        pred2 = clf.predict(X_test)
-        if pred2[0] == 0:
-            pred2 = -1
-        else:
-            pred2 = 1
+        for clf in classifiers:
+            pred = clf.predict(X_test)
+            if pred[0] == 0:
+                pred = -1
+            else:
+                pred = 1
 
-        queue.put([pred1, pred2])
+            predictions.append(pred)
+
+        queue.put(predictions)
+
+    consumer.close()
 
 
 if __name__ == '__main__':
