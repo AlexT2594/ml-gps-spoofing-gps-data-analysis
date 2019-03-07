@@ -527,9 +527,9 @@ def get_single_elem_from_file(file):
 
 def nmea_log_to_entry(nmea_log):
     """
-    Transforms the entry, represented as "phrase;phrase;phrase..." into an array of array
+    Transforms the entry, represented as "phrase;phrase;phrase..." into a dict of type {"$GPGGA" : [], "$GPGSV" : []}
     :param nmea_log: String
-    :return: [[], [], []]
+    :return: {String : [], String : []}
     """
 
     entry = {}
@@ -553,7 +553,7 @@ def nmea_log_to_entry(nmea_log):
             single_phrase = get_GGA_entry_as_array(line)
             entry[message_ID] = single_phrase
             line_index += 1
-        elif message_ID == "$GPGSV" or message_ID == "$GLGSV":
+        elif message_ID == "$GPGSV":
             fields = line.split(',')
             total_number_of_messages = int(fields[1])
             GSV_messages = []
@@ -563,7 +563,7 @@ def nmea_log_to_entry(nmea_log):
             single_phrase = get_GSV_entry_as_array(GSV_messages)
             entry[message_ID] = single_phrase
             line_index += total_number_of_messages
-        elif message_ID == "$GPGSA" or message_ID == "$GNGSA":
+        elif message_ID == "$GPGSA":
             single_phrase = get_GSA_entry_as_array(line)
             entry[message_ID] = single_phrase
             line_index += 1
@@ -643,8 +643,12 @@ def gen_test_entry(lines):
     test_entry += labels
 
     entry = nmea_log_to_entry(lines)
+
     if len(entry) == 0:
         return "" #empty string means we're not stable
+
+    if "$GPGSA" not in entry or "$GPGSV" not in entry:
+        return "incomplete" #if we don't have our attributes then we'll skip this entry
 
     sv_info = get_sv_info_from_single_entry(entry)
     DOP_info = get_DOP_from_single_entry(entry)

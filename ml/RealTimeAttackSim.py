@@ -149,15 +149,21 @@ def animate(i, q, xs, ys):
 
 def consumeData(queue, classifiers):
 
-    consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9092'])
+    consumer = KafkaConsumer(topic_name, auto_offset_reset='latest', bootstrap_servers=['localhost:9092'])
                              #,consumer_timeout_ms=1000)
 
     for msg in consumer:
         entry = msg.value.decode('utf-8')
 
+        print("==> Entry")
+        print(entry)
+
         data_test = gen_test_entry(entry)
+
         if data_test == "":
             predictions = [-2] * 8
+        elif data_test == "incomplete":
+            continue
         else:
             X_test = pd.read_csv(StringIO(data_test))
 
