@@ -136,15 +136,15 @@ def animate(i, q, xs, ys):
 
         axes[i].set_xticklabels(x_labels)
 
-        axes[i].set_yticks([-2, -1, 0, 1, 2])
+        axes[i].set_yticks([-3, -2, -1, 0, 1, 2, 3])
         axes[i].set_title(names[i].replace(' ', '\n'))
 
         axes[i].tick_params(axis='x', rotation=45)
 
         if i != 0 and i != 4:
-            axes[i].set_yticklabels(['', '', '', ''])
+            axes[i].set_yticklabels(['', '', '', '', '', '', ''])
         else:
-            axes[i].set_yticklabels(['', 'Safe', '', 'Spoof Attack!', ''])
+            axes[i].set_yticklabels(['', 'Not Stable', '', 'Safe', '', 'Spoof Attack!', ''])
 
 
 def consumeData(queue, classifiers):
@@ -157,20 +157,20 @@ def consumeData(queue, classifiers):
 
         data_test = gen_test_entry(entry)
         if data_test == "":
-            continue
+            predictions = [-2] * 8
+        else:
+            X_test = pd.read_csv(StringIO(data_test))
 
-        X_test = pd.read_csv(StringIO(data_test))
+            predictions = []
 
-        predictions =[]
+            for clf in classifiers:
+                pred = clf.predict(X_test)
+                if pred[0] == 0:
+                    pred = 0
+                else:
+                    pred = 2
 
-        for clf in classifiers:
-            pred = clf.predict(X_test)
-            if pred[0] == 0:
-                pred = -1
-            else:
-                pred = 1
-
-            predictions.append(pred)
+                predictions.append(pred)
 
         queue.put(predictions)
 
