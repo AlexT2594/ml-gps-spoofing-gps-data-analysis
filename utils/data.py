@@ -622,9 +622,9 @@ def get_sv_info_from_single_entry(entry):
 
 def gen_test_entry(lines):
     """
-    Generates a test entry for the ML algorithms from raw NMEA lines represented as "entry;entry;entry"
+    Generates a test entry for the ML algorithms from raw NMEA lines represented as "entry;entry;entry" and the relative time
     :param lines: String
-    :return: String
+    :return: String, String
     """
 
     GPS_TOTAL_SAT = 32
@@ -645,10 +645,13 @@ def gen_test_entry(lines):
     entry = nmea_log_to_entry(lines)
 
     if len(entry) == 0:
-        return "" #empty string means we're not stable
+        return "", ""  # empty string means we're not stable
 
     if "$GPGSA" not in entry or "$GPGSV" not in entry:
-        return "incomplete" #if we don't have our attributes then we'll skip this entry
+        return "incomplete", ""  # if we don't have our attributes then we'll skip this entry
+
+    # if we are here then we are stable
+    time = lines.split(";")[0].split(",")[1]
 
     sv_info = get_sv_info_from_single_entry(entry)
     DOP_info = get_DOP_from_single_entry(entry)
@@ -660,7 +663,7 @@ def gen_test_entry(lines):
     test_entry += DOP_info[1] + ","
     test_entry += DOP_info[2]
 
-    return test_entry
+    return test_entry, time
 
 
 def transform_data_into_CSV(file):

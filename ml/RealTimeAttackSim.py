@@ -27,6 +27,7 @@ from utils.data import gen_test_entry
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import datetime as dt
+from dateutil import tz
 import time
 import random
 
@@ -39,6 +40,9 @@ names = ["Logistic Regression", "Nearest Neighbors", "Linear SVM", "RBF SVM",
          "Decision Tree", "Random Forest", "Neural Net", "AdaBoost"]
 
 topic_name = 'raw_nmea'
+
+from_zone = tz.tzutc()
+to_zone = tz.tzlocal()
 
 # Create figure for plotting
 fig = plt.figure(figsize=(10, 5))
@@ -114,7 +118,24 @@ def main():
 
 
 def animate(i, q, xs, ys):
-    xs.append(dt.datetime.now().strftime('%H:%M:%S'))
+    #xs.append(dt.datetime.now().strftime('%H:%M:%S'))
+    time = q.get()
+    predictions = q.get()
+
+    print("==> Time")
+    print(time)
+
+    if time is not "":
+        time_beautify = time[:2] + ":" + time[2:4] + ":" + time[4:6]
+        utc = dt.datetime.strptime(time_beautify, "%H:%M:%S")
+        utc = utc.replace(tzinfo=from_zone)
+
+        time = utc.astimezone(to_zone).strftime("%H:%M:%S")
+
+        print("==> Central Time")
+        print(time)
+
+    xs.append(time)
     xs = xs[-20:]
     min_time = min(xs)
     max_time = max(xs)
@@ -122,8 +143,6 @@ def animate(i, q, xs, ys):
     x_labels = [''] * len(xs)
     x_labels[0] = min_time
     x_labels[len(xs) - 1] = max_time
-
-    predictions = q.get()
 
     for i in range(ALG_LEN):
         ys[i].append(predictions[i])
@@ -158,7 +177,11 @@ def consumeData(queue, classifiers):
         print("==> Entry")
         print(entry)
 
-        data_test = gen_test_entry(entry)
+        data_test, time = gen_test_entry(entry)
+
+        #we'll update the queue in the following way:
+        #the first added element is the x_axis elem
+        #the second element added is the array containing the y_axis elems
 
         if data_test == "":
             predictions = [-2] * 8
@@ -178,6 +201,7 @@ def consumeData(queue, classifiers):
 
                 predictions.append(pred)
 
+        queue.put(time)
         queue.put(predictions)
 
     consumer.close()
