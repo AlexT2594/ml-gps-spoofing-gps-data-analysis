@@ -29,8 +29,8 @@ def main():
         lat_entries.append(float(lat_long_entry[0]))
         long_entries.append(float(lat_long_entry[1]))
 
-    axes[0].set_title("Lat entries")
-    axes[0].boxplot(lat_entries, vert=False, showfliers=False)
+    axes[0].set_title("Latitude")
+    axes[0].boxplot(lat_entries, vert=False)
     axes[0].set_yticklabels([''])
 
     print("==> Lat values:")
@@ -38,8 +38,8 @@ def main():
     print("==> \tLower percentile: " + str(np.percentile(lat_entries, 25)))
     print("==> \tUpper percentile: " + str(np.percentile(lat_entries, 75)))
 
-    axes[1].set_title("Long entries")
-    axes[1].boxplot(long_entries, vert=False, showfliers=False)
+    axes[1].set_title("Longitude")
+    axes[1].boxplot(long_entries, vert=False)
     axes[1].set_yticklabels([''])
 
     print("==> Long values:")
@@ -65,13 +65,19 @@ def animate(i, q, ground_truth, observation_vals):
     observation_vals[0].append(lat_long[0])
     observation_vals[1].append(lat_long[1])
 
+    #we observe only the last 20 entries, otherwise our boxplot is influenced by old values
+    observation_vals[0] = observation_vals[0][-20:]
+    observation_vals[1] = observation_vals[1][-20:]
+
     axes[0].clear()
-    axes[0].boxplot([observation_vals[0], ground_truth[0]], vert=False, showfliers=False)
+    axes[0].boxplot([observation_vals[0], ground_truth[0]], vert=False)
     axes[0].set_yticklabels(['Monitoring', 'Ground\nTruth'])
+    axes[0].set_title('Latitude')
 
     axes[1].clear()
-    axes[1].boxplot([observation_vals[1], ground_truth[1]], vert=False, showfliers=False)
+    axes[1].boxplot([observation_vals[1], ground_truth[1]], vert=False)
     axes[1].set_yticklabels(['Monitoring', 'Ground\nTruth'])
+    axes[1].set_title('Longitude')
 
 
 def consumeData(queue):
