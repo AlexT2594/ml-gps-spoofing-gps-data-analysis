@@ -380,17 +380,14 @@ def get_lat_long_entries_from_file(file):
         fields = line.split(",")
         message_ID = fields[0]
 
-        # check if we have become stable
-        if not stable:
-            # we'll never become stable if not GPGGA
-            if message_ID != "$GPGGA":
-                continue
+        # check if we are stable or not
+        if message_ID == "$GPGGA":
+            gps_qi = int(check_if_null(fields[6]))
+            if gps_qi != 0:
+                stable = True
             else:
-                gps_qi = int(check_if_null(fields[6]))
-                if gps_qi != 0:
-                    stable = True
-                else:
-                    continue
+                stable = False
+
         # we don't use an else since it could happen that we became stable and need to start immediately
         # an else would make us loose the first elements
         if stable:
@@ -950,8 +947,8 @@ def get_GGA_entry_as_array(entry):
     age_of_diff_gps_data = check_if_null(fields[13])  # interval
     diff_ref_station_id = check_if_null(fields[14].split('*')[0])
 
-    # len(entry_array) = 7
-    entry_array = [gps_qi, sat_num, hor_dilution, antenna_alt,
+    # len(entry_array) = 9
+    entry_array = [gps_qi, lat, long, sat_num, hor_dilution, antenna_alt,
                    geoidal_sep, age_of_diff_gps_data, diff_ref_station_id]
 
     '''

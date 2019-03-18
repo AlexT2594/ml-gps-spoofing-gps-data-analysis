@@ -136,19 +136,29 @@ def animate(i, q, xs, ys):
         print(time)
 
     xs.append(time)
-    xs = xs[-20:]
-    min_time = min(xs)
-    max_time = max(xs)
+    xs = xs[-10:]
+    min_time = ''
+    for xs_elem in xs:
+        if xs_elem is not '':
+            min_time = xs_elem
+            break
+    max_time = xs[-1]
 
     x_labels = [''] * len(xs)
     x_labels[0] = min_time
-    x_labels[len(xs) - 1] = max_time
+    x_labels[len(x_labels) - 1] = max_time
+
+    print("X labels ")
+    print(x_labels)
+
+    print("xs")
+    print(xs)
 
     for i in range(ALG_LEN):
         ys[i].append(predictions[i])
 
         # Limit x and y lists to 20 items
-        ys[i] = ys[i][-20:]
+        ys[i] = ys[i][-10:]
 
         axes[i].clear()
         axes[i].plot(xs, ys[i])
@@ -168,7 +178,7 @@ def animate(i, q, xs, ys):
 
 def consumeData(queue, classifiers):
 
-    consumer = KafkaConsumer(topic_name, auto_offset_reset='latest', bootstrap_servers=['localhost:9092'])
+    consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9092'])
                              #,consumer_timeout_ms=1000)
 
     for msg in consumer:
