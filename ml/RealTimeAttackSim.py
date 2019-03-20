@@ -44,17 +44,17 @@ topic_name = 'raw_nmea'
 from_zone = tz.tzutc()
 to_zone = tz.tzlocal()
 
-# Create figure for plotting
-fig = plt.figure(figsize=(10, 5))
-axes = []
-for i in range(1, ALG_LEN + 1):
-    axes.append(fig.add_subplot(2, 4, i))
 
-plt.subplots_adjust(left=0.15, bottom=0.2, hspace=1.1, wspace=0.3)
+def main(file):
 
+    # Create figure for plotting
+    fig = plt.figure(figsize=(10, 5))
+    axes = []
+    for i in range(1, ALG_LEN + 1):
+        axes.append(fig.add_subplot(2, 4, i))
 
+    plt.subplots_adjust(left=0.15, bottom=0.2, hspace=1.1, wspace=0.3)
 
-def main():
     N_SAT = 32
 
     classifiers_init = [
@@ -88,7 +88,8 @@ def main():
         transformers=[
             ('num', numeric_transformer, numeric_features)])
 
-    data_file_name = "../data/day39_40_spoof_with_true_data1.csv"
+    data_file_name = file
+    #data_file_name = "../data/day39_40_spoof_with_true_data1.csv"
     data = pd.read_csv(data_file_name)
 
     X_train = data.drop('spoofed', axis=1)
@@ -96,8 +97,8 @@ def main():
 
     # iterate over classifiers
     for name, classifier in zip(names, classifiers_init):
-        print("==> Classifier: " + name)
-        print("\tTraining phase\n")
+        #print("==> Classifier: " + name)
+        #print("\tTraining phase\n")
         clf = Pipeline(steps=[('preprocessor', preprocessor),
                               ('classifier', classifier)])
 
@@ -113,17 +114,23 @@ def main():
     thread.start()
 
     # Set up plot to call animate() function periodically
-    ani = animation.FuncAnimation(fig, animate, fargs=(queue, xs, ys), interval=1000)
+    ani = animation.FuncAnimation(fig, animate, fargs=(fig, axes, queue, xs, ys), interval=1000)
     plt.show()
 
+    print("    Exiting...")
+    return
 
-def animate(i, q, xs, ys):
+
+def animate(i, fig, axes, q, xs, ys):
     #xs.append(dt.datetime.now().strftime('%H:%M:%S'))
-    time = q.get()
-    predictions = q.get()
 
-    print("==> Time")
-    print(time)
+    try:
+        time = q.get(timeout=10)
+        predictions = q.get()
+    except:
+        print("    Timeout expired, closing visualization.")
+        plt.close(fig)
+        return
 
     if time is not "":
         time_beautify = time[:2] + ":" + time[2:4] + ":" + time[4:6]
@@ -132,8 +139,6 @@ def animate(i, q, xs, ys):
 
         time = utc.astimezone(to_zone).strftime("%H:%M:%S")
 
-        print("==> Central Time")
-        print(time)
 
     xs.append(time)
     xs = xs[-10:]
@@ -145,14 +150,10 @@ def animate(i, q, xs, ys):
     max_time = xs[-1]
 
     x_labels = [''] * len(xs)
-    x_labels[0] = min_time
-    x_labels[len(x_labels) - 1] = max_time
 
-    print("X labels ")
-    print(x_labels)
-
-    print("xs")
-    print(xs)
+    for xs_index in range(len(xs)):
+        if xs[xs_index] is min_time or xs[xs_index] is max_time:
+            x_labels[xs_index] = xs[xs_index]
 
     for i in range(ALG_LEN):
         ys[i].append(predictions[i])
@@ -178,14 +179,11 @@ def animate(i, q, xs, ys):
 
 def consumeData(queue, classifiers):
 
-    consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9092'])
-                             #,consumer_timeout_ms=1000)
+    consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9092']
+                             , consumer_timeout_ms=1000)
 
     for msg in consumer:
         entry = msg.value.decode('utf-8')
-
-        print("==> Entry")
-        print(entry)
 
         data_test, time = gen_test_entry(entry)
 
@@ -218,4 +216,4 @@ def consumeData(queue, classifiers):
 
 
 if __name__ == '__main__':
-    main()
+    main("../data/day39_40_spoof_with_true_data1.csv")

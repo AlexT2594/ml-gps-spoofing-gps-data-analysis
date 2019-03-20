@@ -1,27 +1,21 @@
 from utils.data import get_lat_long_entries_from_file
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import numpy as np
-
 from utils.data import nmea_log_to_entry
-
 import multiprocessing as mp
 from threading import Thread
-
-
 from kafka import KafkaConsumer
+import numpy as np
+
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 topic_name = 'raw_nmea'
 
-fig, axes = plt.subplots(nrows=2, ncols=1)
-plt.subplots_adjust(left=0.15, hspace=0.5)
 
+def main(file):
+    fig, axes = plt.subplots(nrows=2, ncols=1)
+    plt.subplots_adjust(left=0.15, hspace=0.5)
 
-def main():
-    print("==> Lat/Long Analysis")
-    print("\tActual position analysis")
-
-    lat_long_entries = get_lat_long_entries_from_file("../data/true_data.txt")
+    lat_long_entries = get_lat_long_entries_from_file(file)
 
     lat_entries = []
     long_entries = []
@@ -33,19 +27,19 @@ def main():
     axes[0].boxplot(lat_entries, vert=False)
     axes[0].set_yticklabels([''])
 
-    print("==> Lat values:")
-    print("==> \tMedian: " + str(np.median(lat_entries)))
-    print("==> \tLower percentile: " + str(np.percentile(lat_entries, 25)))
-    print("==> \tUpper percentile: " + str(np.percentile(lat_entries, 75)))
+    print("    Lat values:")
+    print("\tMedian: " + str(np.median(lat_entries)))
+    print("\tLower percentile: " + str(np.percentile(lat_entries, 25)))
+    print("\tUpper percentile: " + str(np.percentile(lat_entries, 75)))
 
     axes[1].set_title("Longitude")
     axes[1].boxplot(long_entries, vert=False)
     axes[1].set_yticklabels([''])
 
-    print("==> Long values:")
-    print("==> \tMedian: " + str(np.median(long_entries)))
-    print("==> \tLower percentile: " + str(np.percentile(long_entries, 25)))
-    print("==> \tUpper percentile: " + str(np.percentile(long_entries, 75)))
+    print("    Long values:")
+    print("\tMedian: " + str(np.median(long_entries)))
+    print("\tLower percentile: " + str(np.percentile(long_entries, 25)))
+    print("\tUpper percentile: " + str(np.percentile(long_entries, 75)))
 
     queue = mp.Queue()
 
@@ -55,13 +49,23 @@ def main():
     thread.start()
 
     # Set up plot to call animate() function periodically
-    ani = animation.FuncAnimation(fig, animate, fargs=(queue, [lat_entries, long_entries], lat_long_vals), interval=1000)
+    ani = animation.FuncAnimation(fig, animate, fargs=(fig, axes, queue, [lat_entries, long_entries], lat_long_vals),
+                                  interval=1000)
     plt.show()
 
+    print("    Exiting...")
+    return
 
-def animate(i, q, ground_truth, observation_vals):
 
-    lat_long = q.get()
+def animate(i, fig, axes, q, ground_truth, observation_vals):
+
+    try:
+        lat_long = q.get(timeout=10)
+    except:
+        print("    Timeout expired, closing visualization.")
+        plt.close(fig)
+        return
+
     observation_vals[0].append(lat_long[0])
     observation_vals[1].append(lat_long[1])
 
@@ -82,16 +86,11 @@ def animate(i, q, ground_truth, observation_vals):
 
 def consumeData(queue):
 
-    consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9092'])
-                             #,consumer_timeout_ms=1000)
-
-    print("Started the consumer")
+    consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9092'],
+                             consumer_timeout_ms=10000)
 
     for msg in consumer:
         entry = msg.value.decode('utf-8')
-
-        print("==> Entry")
-        print(entry)
 
         entry = nmea_log_to_entry(entry)
 
@@ -102,13 +101,10 @@ def consumeData(queue):
         lat = GGA_entry[1]
         long = GGA_entry[2]
 
-        print("Latitude " + lat)
-        print("Longitude " + long)
-
         queue.put([float(lat), float(long)])
 
     consumer.close()
 
 
 if __name__ == '__main__':
-    main()
+    main("../data/true_data.txt")

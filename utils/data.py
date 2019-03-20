@@ -904,7 +904,6 @@ def transform_data_for_sv_info_DOP_analysis_into_CSV(filenames, y, mix=False, cs
 
     csv_file.write(labels)
 
-    print(dataset[0])
 
     sample_index = 0
     features_length = len(dataset[0])
