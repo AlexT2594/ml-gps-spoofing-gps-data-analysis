@@ -25,7 +25,7 @@ def main(file):
 
     axes[0].set_title("Latitude")
     axes[0].boxplot(lat_entries, vert=False)
-    axes[0].set_yticklabels([''])
+    axes[0].set_yticklabels(['Monitoring', 'Ground\nTruth'])
 
     print("    Lat values:")
     print("\tMedian: " + str(np.median(lat_entries)))
@@ -34,7 +34,7 @@ def main(file):
 
     axes[1].set_title("Longitude")
     axes[1].boxplot(long_entries, vert=False)
-    axes[1].set_yticklabels([''])
+    axes[1].set_yticklabels(['Monitoring', 'Ground\nTruth'])
 
     print("    Long values:")
     print("\tMedian: " + str(np.median(long_entries)))

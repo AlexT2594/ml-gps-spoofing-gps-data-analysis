@@ -35,7 +35,13 @@ if __name__ == '__main__':
         if 0 not in labels:
             raise Exception('At least one not spoofed log is needed.')
 
-        utils.concatenate_files(filenames, OUTPUT_FILENAME)
+        fnames = []
+
+        for fname, label in zip(filenames, labels):
+            if label == 0:
+                fnames.append(fname)
+
+        utils.concatenate_files(fnames, OUTPUT_FILENAME)
         ml.LatLongAnalysis2.main(OUTPUT_FILENAME)
         os.remove(OUTPUT_FILENAME)
 
