@@ -2,7 +2,7 @@ from kafka import KafkaProducer
 
 
 def main():
-    messages = get_nmea_entries('../data/true_with_spoof.txt')
+    messages = get_nmea_entries("../data/../data/lat_long_eval/lat_long_eval_F.txt")
     if len(messages) > 0:
         kafka_producer = connect_kafka_producer()
 

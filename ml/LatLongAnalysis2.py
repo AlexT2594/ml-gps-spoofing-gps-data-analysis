@@ -27,19 +27,35 @@ def main(file):
     axes[0].boxplot(lat_entries, vert=False)
     axes[0].set_yticklabels(['Monitoring', 'Ground\nTruth'])
 
+    Q1_lat = np.percentile(lat_entries, 25)
+    Q3_lat = np.percentile(lat_entries, 75)
+
+    lat_lower_whisker = Q1_lat - (1.5 * (Q3_lat - Q1_lat))
+    lat_upper_whisker = Q3_lat + (1.5 * (Q3_lat - Q1_lat))
+
     print("    Lat values:")
     print("\tMedian: " + str(np.median(lat_entries)))
-    print("\tLower percentile: " + str(np.percentile(lat_entries, 25)))
-    print("\tUpper percentile: " + str(np.percentile(lat_entries, 75)))
+    print("\tLower percentile: " + str(Q1_lat))
+    print("\tUpper percentile: " + str(Q3_lat))
+    print("\tLower whisker: " + str(lat_lower_whisker))
+    print("\tUpper whisker: " + str(lat_upper_whisker))
 
     axes[1].set_title("Longitude")
     axes[1].boxplot(long_entries, vert=False)
     axes[1].set_yticklabels(['Monitoring', 'Ground\nTruth'])
 
+    Q1_long = np.percentile(long_entries, 25)
+    Q3_long = np.percentile(long_entries, 75)
+
+    long_lower_whisker = Q1_long - (1.5 * (Q3_long - Q1_long))
+    long_upper_whisker = Q3_long + (1.5 * (Q3_long - Q1_long))
+
     print("    Long values:")
     print("\tMedian: " + str(np.median(long_entries)))
-    print("\tLower percentile: " + str(np.percentile(long_entries, 25)))
-    print("\tUpper percentile: " + str(np.percentile(long_entries, 75)))
+    print("\tLower percentile: " + str(Q1_long))
+    print("\tUpper percentile: " + str(Q3_long))
+    print("\tLower whisker: " + str(long_lower_whisker))
+    print("\tUpper whisker: " + str(long_upper_whisker))
 
     queue = mp.Queue()
 
