@@ -49,6 +49,11 @@ if __name__ == '__main__':
         print("==> Numeric analysis mode")
         print("    Does a real-time analysis on relevant numeric attributes of the signal.")
 
+        if 0 not in labels:
+            raise Exception('At least one not spoofed log is needed.')
+        if 1 not in labels:
+            raise Exception('At least one spoofed log is needed.')
+
         utils.transform_data_for_sv_info_DOP_analysis_into_CSV(filenames, labels, csv_name=OUTPUT_FILENAME_CSV)
         ml.RealTimeAttackSim.main(OUTPUT_FILENAME_CSV)
         os.remove(OUTPUT_FILENAME_CSV)

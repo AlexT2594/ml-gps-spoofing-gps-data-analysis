@@ -39,7 +39,7 @@ ALG_LEN = 8
 names = ["Logistic Regression", "Nearest Neighbors", "Linear SVM", "RBF SVM",
          "Decision Tree", "Random Forest", "Neural Net", "AdaBoost"]
 
-topic_name = 'raw_nmea'
+topic_name = 'raw_nmea_numeric'
 
 from_zone = tz.tzutc()
 to_zone = tz.tzlocal()
@@ -216,4 +216,4 @@ def consumeData(queue, classifiers):
 
 
 if __name__ == '__main__':
-    main("../data/day39_40_spoof_with_true_data1.csv")
+    main("../data/numeric_eval/data_test.csv")

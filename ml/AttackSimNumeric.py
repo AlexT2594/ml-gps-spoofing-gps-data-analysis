@@ -56,32 +56,29 @@ def main():
         transformers=[
             ('num', numeric_transformer, numeric_features)])
 
-    data_file_name = "../data/attack_sim_sv_info_DOP_analysis.csv"
-    data = pd.read_csv(data_file_name)
+    data_train_file_name = "../data/numeric_eval/data_train.csv"
+    data_train = pd.read_csv(data_train_file_name)
 
-    X = data.drop('spoofed', axis=1)
-    y = data['spoofed']
+    X_train = data_train.drop('spoofed', axis=1)
+    y_train = data_train['spoofed']
+
+    data_test_file_name = "../data/numeric_eval/data_test.csv"
+    data_test = pd.read_csv(data_test_file_name)
+
+    X_test = data_test.drop('spoofed', axis=1)
+    y_test = data_test['spoofed']
 
     # iterate over classifiers
     for name, classifier in zip(names, classifiers):
+        print("==> Classifier: " + name)
         clf = Pipeline(steps=[('preprocessor', preprocessor),
                               ('classifier', classifier)])
 
-        """
-
-        This was done traditionally, without using a K-fold cross-validation method.
-
         clf.fit(X_train, y_train)
-        score = clf.score(X_test, y_test)
+        pred = clf.predict(X_test)
 
-        print("==> Classifier: " + name)
-        print("\tScore: %.3f" % score)
-        """
-
-        #  mean score and the 95% confidence interval of the score
-        scores = cross_val_score(clf, X, y, cv=StratifiedKFold(n_splits=10, shuffle=True))
-        print("==> Classifier: " + name)
-        print("\tAccuracy: %0.3f (+/- %0.3f)" % (scores.mean(), scores.std() * 2))
+        score = accuracy_score(y_test, pred)
+        print("Accuracy:   %0.3f" % score)
 
 
 if __name__ == '__main__':

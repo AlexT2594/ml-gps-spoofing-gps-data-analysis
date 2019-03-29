@@ -30,13 +30,27 @@ import datetime as dt
 import time
 import random
 
-from utils.data import concatenate_files
+from utils.data import concatenate_files, transform_data_for_sv_info_DOP_analysis_into_CSV
 
 import multiprocessing as mp
 
+
 def main():
-    concatenate_files(["../data/last_entries_ground_truth.txt", "../data/lat_long_eval/spoof_70_A.txt"],
-                      "../data/lat_long_eval/lat_long_eval_L.txt")
+    transform_data_for_sv_info_DOP_analysis_into_CSV(["../data/ground_truth.txt",
+                                                      "../data/lat_long_eval/spoof_70_A.txt",
+                                                      "../data/lat_long_eval/spoof_70_B.txt",
+                                                      "../data/lat_long_eval/spoof_70_C.txt",
+                                                      "../data/lat_long_eval/spoof_70_E.txt",
+                                                      "../data/lat_long_eval/spoof_70_F.txt",
+                                                      "../data/lat_long_eval/spoof_70_G.txt",
+                                                      "../data/lat_long_eval/spoof_70_H.txt"],
+                                                     [0, 1, 1, 1, 1, 1, 1, 1],
+                                                     False, "../data/numeric_eval/data_train.csv")
+
+    transform_data_for_sv_info_DOP_analysis_into_CSV(["../data/numeric_eval/true_11am_10min.txt",
+                                                      "../data/numeric_eval/spoof_71_A.txt"],
+                                                     [0, 1],
+                                                     False, "../data/numeric_eval/data_test.csv")
 
 
 if __name__ == '__main__':

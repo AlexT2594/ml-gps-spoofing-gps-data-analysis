@@ -8,7 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-topic_name = 'raw_nmea'
+
+topic_name = 'raw_nmea_A'
 
 
 def main(file):
