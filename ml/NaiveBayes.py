@@ -6,6 +6,7 @@ from utils.data import get_data_from_file_2, get_single_elem_from_file, get_data
 from utils.data import get_lat_long_info_from_file
 from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict
 from sklearn.metrics import confusion_matrix, accuracy_score
+from random import shuffle
 
 def main():
 
@@ -27,9 +28,10 @@ def main():
     :return:
     """
 
-    dataset0, labels0 = get_data_from_file_2("../data/day39spoof.txt", label=0)
-    dataset1, labels1 = get_data_from_file_2("../data/day40spoof.txt", label=1)
-    dataset2, labels2 = get_data_from_file_2("../data/day41spoof.txt", label=2)
+    dataset0, labels0 = get_data_from_file_2("../data/ground_truth.txt", label=0)
+    dataset1, labels1 = get_data_from_file_2("../data/lat_long_eval/spoof_70_A.txt", label=1)
+    dataset2, labels2 = get_data_from_file_2("../data/lat_long_eval/spoof_70_B.txt", label=1)
+    print(dataset2)
 
     dataset = dataset0 + dataset1 + dataset2
     y = labels0 + labels1 + labels2

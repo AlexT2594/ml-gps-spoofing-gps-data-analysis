@@ -124,4 +124,4 @@ def consumeData(queue):
 
 
 if __name__ == '__main__':
-    main("../data/true_data.txt")
+    main("../data/ground_truth.txt")

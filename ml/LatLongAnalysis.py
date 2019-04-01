@@ -11,7 +11,7 @@ from threading import Thread
 
 from kafka import KafkaConsumer
 
-topic_name = 'raw_nmea'
+topic_name = 'raw_nmea_A'
 
 fig, axes = plt.subplots(nrows=2, ncols=1)
 plt.subplots_adjust(left=0.15, hspace=0.5)
@@ -21,7 +21,7 @@ def main():
     print("==> Lat/Long Analysis")
     print("\tDifference between adjacent entries analysis")
 
-    lat_long_entries = get_lat_long_entries_from_file("../data/true_data.txt")
+    lat_long_entries = get_lat_long_entries_from_file("../data/ground_truth.txt")
 
     entries_length = len(lat_long_entries)
     print("==> Number of entries: " + str(entries_length))

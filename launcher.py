@@ -1,6 +1,7 @@
 import argparse
-import ml.LatLongAnalysis2
-import ml.RealTimeAttackSim
+import ml.LatLongAnalysis2 as LatLongAnalysis
+import ml.RealTimeAttackSim as RealTimeAttackSim
+import ml.RealTimeNB as RealTimeNB
 import utils.data as utils
 
 import os
@@ -12,11 +13,10 @@ if __name__ == '__main__':
                         help='filename of NMEA logs with the same label')
     parser.add_argument('-l', type=int, metavar='integer_label', nargs='+', choices=[0, 1], required=True,
                         help='integer label for corresponding log\noptions: 0 (not spoofed)\n\t 1 (spoofed)')
-    parser.add_argument('-m', type=str, metavar='mode', nargs=1, required=True, choices=['latlong', 'numeric'],
-                        help='options: latlong\n\t numeric')
+    parser.add_argument('-m', type=str, metavar='mode', nargs=1, required=True, choices=['nb', 'latlong', 'numeric'],
+                        help='options: nb\n\t latlong\n\t numeric')
 
     args = parser.parse_args()
-    print(args)
 
     OUTPUT_FILENAME = "data.txt"
     OUTPUT_FILENAME_CSV = "data.csv"
@@ -42,12 +42,12 @@ if __name__ == '__main__':
                 fnames.append(fname)
 
         utils.concatenate_files(fnames, OUTPUT_FILENAME)
-        ml.LatLongAnalysis2.main(OUTPUT_FILENAME)
+        LatLongAnalysis.main(OUTPUT_FILENAME)
         os.remove(OUTPUT_FILENAME)
 
-    else:
+    elif mode[0] == 'numeric':
         print("==> Numeric analysis mode")
-        print("    Does a real-time analysis on relevant numeric attributes of the signal.")
+        print("    Description: Does a real-time analysis on relevant numeric attributes of the signal.")
 
         if 0 not in labels:
             raise Exception('At least one not spoofed log is needed.')
@@ -55,7 +55,25 @@ if __name__ == '__main__':
             raise Exception('At least one spoofed log is needed.')
 
         utils.transform_data_for_sv_info_DOP_analysis_into_CSV(filenames, labels, csv_name=OUTPUT_FILENAME_CSV)
-        ml.RealTimeAttackSim.main(OUTPUT_FILENAME_CSV)
+        RealTimeAttackSim.main(OUTPUT_FILENAME_CSV)
         os.remove(OUTPUT_FILENAME_CSV)
+
+    else:
+        print("==> Naive Bayes analysis mode")
+        print("    Description: Does real-time Naive Bayes.")
+
+        if 0 not in labels:
+            raise Exception('At least one not spoofed log is needed.')
+        if 1 not in labels:
+            raise Exception('At least one spoofed log is needed.')
+
+        data_train = []
+        y_train = []
+        for fname, label in zip(filenames, labels):
+            temp_data, temp_label = utils.get_data_from_file_2(fname, label=label)
+            data_train += temp_data
+            y_train += temp_label
+
+        RealTimeNB.main(data_train, y_train)
 
 

@@ -87,6 +87,7 @@ def get_data_from_file_2(file, label=0):
                 line_index += 1
 
                 dataset.append(single_entry)
+                #dataset_labels.append(randint(0, 1))
                 dataset_labels.append(label)
             else:
                 line_index += 1
