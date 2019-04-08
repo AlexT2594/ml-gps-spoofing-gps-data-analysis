@@ -30,12 +30,13 @@ def main(file):
 
     Q1_lat = np.percentile(lat_entries, 25)
     Q3_lat = np.percentile(lat_entries, 75)
+    lat_median = np.median(lat_entries)
 
     lat_lower_whisker = Q1_lat - (1.5 * (Q3_lat - Q1_lat))
     lat_upper_whisker = Q3_lat + (1.5 * (Q3_lat - Q1_lat))
 
     print("    Lat values:")
-    print("\tMedian: " + str(np.median(lat_entries)))
+    print("\tMedian: " + str(lat_median))
     print("\tLower percentile: " + str(Q1_lat))
     print("\tUpper percentile: " + str(Q3_lat))
     print("\tLower whisker: " + str(lat_lower_whisker))
@@ -47,12 +48,13 @@ def main(file):
 
     Q1_long = np.percentile(long_entries, 25)
     Q3_long = np.percentile(long_entries, 75)
+    long_median = np.median(long_entries)
 
     long_lower_whisker = Q1_long - (1.5 * (Q3_long - Q1_long))
     long_upper_whisker = Q3_long + (1.5 * (Q3_long - Q1_long))
 
     print("    Long values:")
-    print("\tMedian: " + str(np.median(long_entries)))
+    print("\tMedian: " + str(long_median))
     print("\tLower percentile: " + str(Q1_long))
     print("\tUpper percentile: " + str(Q3_long))
     print("\tLower whisker: " + str(long_lower_whisker))
@@ -90,15 +92,46 @@ def animate(i, fig, axes, q, ground_truth, observation_vals):
     observation_vals[0] = observation_vals[0][-20:]
     observation_vals[1] = observation_vals[1][-20:]
 
+    lat_entries = observation_vals[0]
+    long_entries = observation_vals[1]
+
+    Q1_lat = np.percentile(ground_truth[0], 25)
+    Q3_lat = np.percentile(ground_truth[0], 75)
+    lat_median = np.median(lat_entries)
+
+    lat_lower_whisker = Q1_lat - (1.5 * (Q3_lat - Q1_lat))
+    lat_upper_whisker = Q3_lat + (1.5 * (Q3_lat - Q1_lat))
+
+    Q1_long = np.percentile(ground_truth[1], 25)
+    Q3_long = np.percentile(ground_truth[1], 75)
+    long_median = np.median(long_entries)
+
+    long_lower_whisker = Q1_long - (1.5 * (Q3_long - Q1_long))
+    long_upper_whisker = Q3_long + (1.5 * (Q3_long - Q1_long))
+
     axes[0].clear()
-    axes[0].boxplot([observation_vals[0], ground_truth[0]], vert=False)
+    axes[0].boxplot([lat_entries, ground_truth[0]], vert=False)
     axes[0].set_yticklabels(['Monitoring', 'Ground\nTruth'])
     axes[0].set_title('Latitude')
 
+    if Q1_lat <= lat_median <= Q3_lat:
+        changeAxisColor(axes[0], 'green')
+    elif lat_lower_whisker <= lat_median <= Q1_lat or Q3_lat <= lat_median <= lat_upper_whisker:
+        changeAxisColor(axes[0], 'orange')
+    else:
+        changeAxisColor(axes[0], 'red')
+
     axes[1].clear()
-    axes[1].boxplot([observation_vals[1], ground_truth[1]], vert=False)
+    axes[1].boxplot([long_entries, ground_truth[1]], vert=False)
     axes[1].set_yticklabels(['Monitoring', 'Ground\nTruth'])
     axes[1].set_title('Longitude')
+
+    if Q1_long <= long_median <= Q3_long:
+        changeAxisColor(axes[1], 'green')
+    elif long_lower_whisker <= long_median <= Q1_long or Q3_lat <= long_median <= long_upper_whisker:
+        changeAxisColor(axes[1], 'orange')
+    else:
+        changeAxisColor(axes[1], 'red')
 
 
 def consumeData(queue):
@@ -121,6 +154,15 @@ def consumeData(queue):
         queue.put([float(lat), float(long)])
 
     consumer.close()
+
+
+def changeAxisColor(axis, color):
+    axis.spines['bottom'].set_color(color)
+    axis.spines['top'].set_color(color)
+    axis.spines['right'].set_color(color)
+    axis.spines['left'].set_color(color)
+    axis.xaxis.label.set_color(color)
+    axis.tick_params(axis='x', colors=color)
 
 
 if __name__ == '__main__':

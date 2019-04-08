@@ -1,4 +1,4 @@
-from utils.data import nmea_log_to_entry, get_data_from_file_2
+from utils.data import nmea_log_to_entry
 import multiprocessing as mp
 from threading import Thread
 from kafka import KafkaConsumer
@@ -32,7 +32,12 @@ def main(data_train, y_train):
         X_test = vectorizer.transform(test_entry)
         pred = clf.predict(X_test)
 
-        print("    Prediction: " + str(pred[0]))
+        if pred[0] == 0:
+            pred = "True"
+        else:
+            pred = "Spoofed"
+
+        print("    Prediction: " + pred)
 
     print("    Exiting...")
     return
