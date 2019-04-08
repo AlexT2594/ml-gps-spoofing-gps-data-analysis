@@ -31,13 +31,16 @@ from dateutil import tz
 import time
 import random
 
+from keras.callbacks import EarlyStopping
+from keras.models import Sequential
+from keras.layers import Dense, Dropout
+
 import multiprocessing as mp
 from threading import Thread
 
-ALG_LEN = 8
+ALG_LEN = 3
 
-names = ["Logistic Regression", "Nearest Neighbors", "Linear SVM", "RBF SVM",
-         "Decision Tree", "Random Forest", "Neural Net", "AdaBoost"]
+names = ["Logistic Regression", "Linear SVM", "Neural Net"]
 
 topic_name = 'raw_nmea_numeric'
 
@@ -48,27 +51,14 @@ to_zone = tz.tzlocal()
 def main(file):
 
     # Create figure for plotting
-    fig = plt.figure(figsize=(10, 5))
+    fig = plt.figure(figsize=(7, 3))
     axes = []
     for i in range(1, ALG_LEN + 1):
-        axes.append(fig.add_subplot(2, 4, i))
+        axes.append(fig.add_subplot(1, 3, i))
 
-    plt.subplots_adjust(left=0.15, bottom=0.2, hspace=1.1, wspace=0.3)
+    plt.subplots_adjust(top=0.8, bottom=0.25, left=0.17, hspace=1.1, wspace=0.3)
 
     N_SAT = 32
-
-    classifiers_init = [
-        LogisticRegression(solver="liblinear", multi_class='auto'),
-        KNeighborsClassifier(),
-        SVC(kernel="linear", C=0.025),
-        SVC(gamma=2, C=1),
-        DecisionTreeClassifier(max_depth=5),
-        RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
-        MLPClassifier(solver="lbfgs"),
-        AdaBoostClassifier()
-    ]
-
-    classifiers = []
 
     # We create the preprocessing pipelines for numeric data
     numeric_features = []
@@ -95,16 +85,46 @@ def main(file):
     X_train = data.drop('spoofed', axis=1)
     y_train = data['spoofed']
 
+    X_train_NN = preprocessor.fit_transform(X_train)
+    y_train_NN = y_train.values
+
+    n_cols = X_train_NN.shape[1]
+
+    model = Sequential()
+    model.add(Dense(64, activation='relu', input_dim=n_cols))
+    model.add(Dropout(0.5))
+    model.add(Dense(64, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(1, activation='sigmoid'))
+
+    model.compile(loss='binary_crossentropy',
+                  optimizer='adam',
+                  metrics=['accuracy'])
+
+    classifiers_init = [
+        LogisticRegression(solver="liblinear", multi_class='auto'),
+        SVC(kernel="linear", C=0.025),
+        model
+    ]
+
+    classifiers = []
+
+
+
     # iterate over classifiers
     for name, classifier in zip(names, classifiers_init):
         #print("==> Classifier: " + name)
         #print("\tTraining phase\n")
-        clf = Pipeline(steps=[('preprocessor', preprocessor),
-                              ('classifier', classifier)])
 
-        clf.fit(X_train, y_train)
-
-        classifiers.append(clf)
+        if name == "Neural Net":
+            classifier.fit(X_train_NN, y_train_NN, epochs=10, callbacks=[EarlyStopping(monitor='loss', patience=3)])
+            classifier._make_predict_function()
+            classifiers.append(classifier)
+        else:
+            clf = Pipeline(steps=[('preprocessor', preprocessor),
+                                  ('classifier', classifier)])
+            clf.fit(X_train, y_train)
+            classifiers.append(clf)
 
     xs = []
     ys = [[], [], [], [], [], [], [], []]
@@ -200,8 +220,11 @@ def consumeData(queue, classifiers):
 
             predictions = []
 
-            for clf in classifiers:
-                pred = clf.predict(X_test)
+            for name, clf in zip(names, classifiers):
+                if name == "Neural Net":
+                    pred = clf.predict(X_test)[0]
+                else:
+                    pred = clf.predict(X_test)
                 if pred[0] == 0:
                     pred = 0
                 else:
@@ -216,4 +239,4 @@ def consumeData(queue, classifiers):
 
 
 if __name__ == '__main__':
-    main("../data/numeric_eval/data_test.csv")
+    main("../data/numeric_eval/data_train.csv")

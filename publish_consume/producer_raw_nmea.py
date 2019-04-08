@@ -2,12 +2,12 @@ from kafka import KafkaProducer
 
 
 def main():
-    messages = get_nmea_entries("../data/numeric_eval/rt_data_test.txt")
+    messages = get_nmea_entries("../data/lat_long_eval/lat_long_eval_A.txt")
     if len(messages) > 0:
         kafka_producer = connect_kafka_producer()
 
         for message in messages:
-            publish_message(kafka_producer, 'raw_nmea_numeric', 'raw_nmea_message', message)
+            publish_message(kafka_producer, 'raw_nmea_A', 'raw_nmea_message', message)
 
         if kafka_producer is not None:
             kafka_producer.close()
