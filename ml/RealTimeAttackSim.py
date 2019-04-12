@@ -199,8 +199,12 @@ def animate(i, fig, axes, q, xs, ys):
 
 def consumeData(queue, classifiers):
 
-    consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9092']
-                             , consumer_timeout_ms=1000)
+    consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9093'],
+                             security_protocol='SSL', ssl_check_hostname=False,
+                             ssl_cafile='../kafka_ssl/CARoot.pem',
+                             ssl_certfile='../kafka_ssl/certificate.pem',
+                             ssl_keyfile='../kafka_ssl/key.pem',
+                             consumer_timeout_ms=10000)
 
     for msg in consumer:
         entry = msg.value.decode('utf-8')

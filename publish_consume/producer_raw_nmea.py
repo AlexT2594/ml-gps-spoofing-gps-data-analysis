@@ -7,7 +7,7 @@ def main():
         kafka_producer = connect_kafka_producer()
 
         for message in messages:
-            publish_message(kafka_producer, 'raw_nmea_G', 'raw_nmea_message', message)
+            publish_message(kafka_producer, 'raw_nmea', 'raw_nmea_message', message)
 
         if kafka_producer is not None:
             kafka_producer.close()
@@ -29,7 +29,10 @@ def connect_kafka_producer():
     _producer = None
 
     try:
-        _producer = KafkaProducer(bootstrap_servers=['localhost:9092'])
+        _producer = KafkaProducer(bootstrap_servers='localhost:9093', security_protocol='SSL', ssl_check_hostname=False,
+                                  ssl_cafile='../kafka_ssl/CARoot.pem',
+                                  ssl_certfile='../kafka_ssl/certificate.pem',
+                                  ssl_keyfile='../kafka_ssl/key.pem')
     except Exception as ex:
         print('Exception while connecting Kafka')
         print(str(ex))

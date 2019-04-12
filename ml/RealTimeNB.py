@@ -45,7 +45,11 @@ def main(data_train, y_train):
 
 def consumeData(queue):
 
-    consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9092'],
+    consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9093'],
+                             security_protocol='SSL', ssl_check_hostname=False,
+                             ssl_cafile='../kafka_ssl/CARoot.pem',
+                             ssl_certfile='../kafka_ssl/certificate.pem',
+                             ssl_keyfile='../kafka_ssl/key.pem',
                              consumer_timeout_ms=10000)
 
     for msg in consumer:
