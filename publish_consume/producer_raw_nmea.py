@@ -33,6 +33,7 @@ def connect_kafka_producer():
                                   ssl_cafile='../kafka_ssl/CARoot.pem',
                                   ssl_certfile='../kafka_ssl/certificate.pem',
                                   ssl_keyfile='../kafka_ssl/key.pem')
+        #_producer = KafkaProducer(bootstrap_servers='localhost:9092')
     except Exception as ex:
         print('Exception while connecting Kafka')
         print(str(ex))
