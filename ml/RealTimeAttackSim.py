@@ -1,35 +1,21 @@
 import pandas as pd
-import numpy as np
+from pandas.compat import StringIO
 
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.linear_model import LogisticRegression
-from sklearn.neural_network import MLPClassifier
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
-from sklearn.gaussian_process import GaussianProcessClassifier
-from sklearn.gaussian_process.kernels import RBF
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import cross_val_score, StratifiedKFold
-from sklearn.metrics import accuracy_score, confusion_matrix
 
-from utils.data import get_numeric_data_from_file
-from random import shuffle
-
-from pandas.compat import StringIO
 from kafka import KafkaConsumer
+
 from utils.data import gen_test_entry
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+
 import datetime as dt
 from dateutil import tz
-import time
-import random
 
 from keras.callbacks import EarlyStopping
 from keras.models import Sequential
@@ -201,9 +187,9 @@ def consumeData(queue, classifiers):
 
     consumer = KafkaConsumer(topic_name, auto_offset_reset='earliest', bootstrap_servers=['localhost:9093'],
                              security_protocol='SSL', ssl_check_hostname=False,
-                             ssl_cafile='../kafka_ssl/CARoot.pem',
-                             ssl_certfile='../kafka_ssl/certificate.pem',
-                             ssl_keyfile='../kafka_ssl/key.pem',
+                             ssl_cafile='kafka_ssl/CARoot.pem',
+                             ssl_certfile='kafka_ssl/certificate.pem',
+                             ssl_keyfile='kafka_ssl/key.pem',
                              consumer_timeout_ms=10000)
 
     for msg in consumer:

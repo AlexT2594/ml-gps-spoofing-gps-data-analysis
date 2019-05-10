@@ -40,6 +40,7 @@ def main(data_train, y_train):
         print("    Prediction: " + pred)
 
     print("    Exiting...")
+
     return
 
 
